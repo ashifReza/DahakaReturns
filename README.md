@@ -1,22 +1,20 @@
 # Relentless
 
-First-person horror chase game in Unreal Engine 5, inspired by the Dahaka chases in *Prince of Persia: Warrior Within*. Something unkillable is behind you. You can only run, look back, and use your flashlight.
+First-person horror chase game, inspired by the Dahaka chases in *Prince of Persia: Warrior Within*. Something unkillable is behind you. You can only run, look back, and use your flashlight.
 
 Level 1: **The Building** (claustrophobic). Level 2: **The Jungle** (next).
 
+This branch is the **Godot 4** version, in the `Godot/` folder. It runs on modest hardware (tested on a GeForce 930MX with 11 GB RAM). The original Unreal Engine 5 version is still in `Source/`, `Config/` and `Scripts/` (and on `main`).
+
 ## Setup
 
-1. Install **Unreal Engine 5.6+** from the Epic Games Launcher.
-2. Install a C++ compiler:
-   - **Windows:** Visual Studio 2022 (Community is free) with the **Game development with C++** workload. In its *Individual components*, also tick a recent **Windows 10/11 SDK** and **.NET Framework 4.8 SDK**.
-   - **Mac:** Xcode.
-3. Double-click `Relentless.uproject` and say **Yes** when asked to build the missing modules. Alternatively, right-click it → *Generate Visual Studio project files*, open `Relentless.sln`, and build `Development Editor | Win64`.
-   - If you installed a newer engine version, it will offer to convert the project. Choose *Open a copy* or *Convert in-place*.
-4. In the editor: **Tools → Execute Python Script…** → `Scripts/build_building_level.py`.
-   This builds and saves `/Game/Maps/Building` (geometry, doors, triggers, lights, fog, pursuer).
-5. Press **Play**.
+1. Download **Godot 4.7** (standard, not .NET) from [godotengine.org](https://godotengine.org/download). It's a single file with nothing to install.
+2. Start Godot, click **Import**, and pick `Godot/project.godot`.
+3. Press **F5** (or the ▶ button) to play.
 
-Everything runs with **zero imported assets**. Input, the creature and the props are built from code and engine basic shapes, so you can playtest before any art exists.
+The level is already built. Everything runs with **zero imported assets**: input, the creature and the props are built from code and basic shapes, so you can playtest before any art exists.
+
+Press **Esc** to free the mouse, and click the game window to capture it again.
 
 ## Controls
 
@@ -31,6 +29,8 @@ Everything runs with **zero imported assets**. Input, the creature and the props
 | **Right mouse** | **Focus beam**: stuns it briefly, drains battery fast |
 | E or left mouse | Slam doors / hold to force heavy doors |
 
+Rebind them in **Project → Project Settings → Input Map**.
+
 ## The building route
 
 Lobby → long corridor (**it bursts out of the lobby behind you**) → ward with a red emergency light → **slam the door** behind you (it bashes through in ~2.5s) → corridor → **heavy door: hold E** while you hear it coming → storage room → **crawl into the vent** (it's too big to follow, so it waits, then vanishes) → corridor → **it ambushes from a side closet** → outside, where it won't follow.
@@ -39,22 +39,44 @@ Checkpoints: chase start, storage room, and after the vent.
 
 ## How it works
 
-| Class | Role |
+All scripts are in `Godot/scripts/`. Distances are in metres.
+
+| Script | Role |
 | --- | --- |
-| `ChaseSubsystem` | Chase state, checkpoints, and the single **danger** value (0–1) that drives everything |
-| `PursuerCharacter` | Follows your exact **breadcrumb trail** (no navmesh). Speed is **rubber-banded** to hold ~6.5m behind you; only mistakes kill. Bashes doors, gets stunned, loses you in vents |
-| `RelentlessCharacter` | First-person player: look-back camera, stamina, flashlight battery and flicker, head bob, fear shake, vignette and grain driven by danger |
-| `ChaseDoor` | Slammable door, or heavy hold-to-open door. Smashes into physics debris |
-| `ChaseTrigger` | Starts the chase, sets a checkpoint, or shows a hint |
-| `VentZone` | Crawlspace: forces crouch, makes the pursuer lose you and ambush from `AmbushPoint` |
-| `SafeZone` | Ends the chase; can load the next level |
-| `FlickerLight` | Faulty ceiling light that dies when the pursuer passes under it |
-| `ChaseMusicDirector` | Adaptive music: fades layers in by danger, cuts ambience as it closes in, speeds up a heartbeat |
-| `BatteryPickup` | Flashlight battery |
+| `chase.gd` (autoload `Chase`) | Chase state, checkpoints, and the single **danger** value (0–1) that drives everything |
+| `pursuer.gd` | Follows your exact **breadcrumb trail** (no navmesh). Speed is **rubber-banded** to hold ~6.5m behind you; only mistakes kill. Bashes doors, gets stunned, loses you in vents |
+| `player.gd` | First-person player: look-back camera, stamina, flashlight battery and flicker, head bob, fear shake |
+| `hud.gd` + `fear_post.gdshader` | Minimal HUD, plus vignette, grain, colour fringing and desaturation driven by danger |
+| `chase_door.gd` | Slammable door, or heavy hold-to-open door. Smashes into physics debris |
+| `chase_trigger.gd` | Starts the chase, sets a checkpoint, or shows a hint |
+| `vent_zone.gd` | Crawlspace: forces crouch, makes the pursuer lose you and ambush from its `AmbushPoint` marker |
+| `safe_zone.gd` | Ends the chase; can load the next level |
+| `flicker_light.gd` | Faulty ceiling light that dies when the pursuer passes under it |
+| `music_director.gd` | Adaptive music: fades layers in by danger, cuts ambience as it closes in, speeds up a heartbeat |
+| `battery_pickup.gd` | Flashlight battery |
+
+Triggers and the vent use child **Marker3D** nodes (`PursuerStart`, `PlayerRespawn`, `AmbushPoint`) for where things appear. Select one and move it in the viewport.
+
+### Rebuilding the level
+
+`scenes/building.tscn` is generated by `tools/building_builder.gd`. You can edit the scene directly, but rebuilding overwrites it. To rebuild:
+
+- **In the editor:** open `tools/build_building_level.gd`, then **File → Run** (Ctrl+Shift+X).
+- **From a terminal:** `godot --headless --path Godot res://tools/build_cli.tscn`
+
+### Automated playtest
+
+`tools/playtest.tscn` steers the player through the whole route and logs what the pursuer does, so you can check a change didn't break the chase:
+
+```bash
+godot --headless --path Godot --fixed-fps 60 res://tools/playtest.tscn
+```
+
+It ends with `ROUTE COMPLETE` and the number of deaths. Run it without `--headless`, and pass a folder after `--`, to also save screenshots along the way.
 
 ## Adding sound (the biggest upgrade)
 
-Import looping `.wav` stems, then select **MusicDirector** in the level and fill **Layers**, for example:
+Import looping `.wav` or `.ogg` stems. For a `.wav`, select it, set **Loop Mode** in the Import dock, and click Reimport. Then select **Gameplay/MusicDirector** in the scene and add **Layers**, for example:
 
 | Layer | Fade in (danger) |
 | --- | --- |
@@ -63,15 +85,16 @@ Import looping `.wav` stems, then select **MusicDirector** in the level and fill
 | Strings | 0.4 – 0.7 |
 | Choir / brass | 0.7 – 0.95 |
 
-Plus **Ambience** (insects, building creaks) and **Heartbeat**. On **Pursuer**, set Roar, Footstep, Bash and Screech sounds. On doors, set Slam, Creak and Break. Stems must loop and share a tempo.
+Plus **Ambience** (insects, building creaks) and **Heartbeat**. On **Pursuer**, set the Roar, Footstep, Bash and Screech sounds. On doors, set Slam, Creak and Break. Stems must loop and share a tempo.
 
-## Tuning (all editable in the Details panel)
+## Tuning (all editable in the Inspector)
 
-- **Too easy / too hard**: on the Pursuer, use `IdealGap`, `NearSpeedScale` (keep it < 1), `FarSpeedScale` and `BashTime`. On the heavy door, use `HoldTime`.
-- **Too dark / too bright**: on the player, `ExposureEV` (lower is brighter), and `FlashlightLumens` and `Lumens` on each light.
-- **Stamina**: `ChaseSprintDrain`, `StaminaRegen`.
+- **Too easy / too hard**: on the Pursuer, use `ideal_gap`, `near_speed_scale` (keep it < 1), `far_speed_scale` and `bash_time`. On the heavy door, use `hold_time`.
+- **Too dark / too bright**: on the player, `flashlight_energy`; on each light, `energy`; and **Tonemap → Exposure** on `Environment/WorldEnvironment`.
+- **Stamina**: `chase_sprint_drain`, `stamina_regen`.
+- **Low frame rate**: on `Environment/WorldEnvironment`, turn off **Volumetric Fog** (worth about 8 FPS on a 930MX). Turning off shadows on the ceiling lights helps a little too.
 
 ## Next steps
 
-- Replace the greybox creature with a real skeletal mesh and animations (the gameplay code doesn't care what it looks like).
+- Replace the greybox creature with a real rigged model and animations (the gameplay code doesn't care what it looks like).
 - Jungle level: same systems, plus foliage that thrashes as it pushes through, ambience cut-out, a stalking phase, and a rope-bridge set piece.

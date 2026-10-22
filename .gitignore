@@ -8,3 +8,6 @@ DerivedDataCache/
 *.xcodeproj
 *.sln
 .DS_Store
+
+# Godot
+Godot/.godot/

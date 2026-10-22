@@ -25,6 +25,7 @@ const BatteryScript := preload("res://scripts/battery_pickup.gd")
 const LightScript := preload("res://scripts/flicker_light.gd")
 const MusicScript := preload("res://scripts/music_director.gd")
 const LevelScript := preload("res://scripts/level.gd")
+const Audio := preload("res://tools/level_audio.gd")
 
 var root: Node3D
 var _folders := {}
@@ -212,6 +213,7 @@ func _gameplay() -> void:
 	ward_door.set("width", 2.0)
 	ward_door.set("open_yaw", 90.0)
 	ward_door.set("starts_open", true)
+	_door_sounds(ward_door)
 
 	var heavy_door: Node3D = _add(DoorScript.new(), "Gameplay")
 	heavy_door.name = "HeavyDoor_Storage"
@@ -221,6 +223,7 @@ func _gameplay() -> void:
 	heavy_door.set("heavy", true)
 	heavy_door.set("hold_time", 1.6)
 	heavy_door.set("color", Color(0.12, 0.13, 0.14))
+	_door_sounds(heavy_door)
 
 	# Chase triggers / checkpoints.
 	_trigger("Hint_Controls", Vector3(-600, 0, 175), Vector3(150, 300, 175), Vector4.ZERO, Vector4.ZERO,
@@ -228,6 +231,7 @@ func _gameplay() -> void:
 	# It bursts out of the lobby behind you.
 	_trigger("Chase_Start", Vector3(700, 0, 175), Vector3(60, 150, 175),
 		Vector4(-650, 0, 0, 0), Vector4(850, 0, 0, 0), "Run.")
+	get_node_or_null_trigger("Chase_Start").set("stinger", Audio.sfx("stinger"))
 	_trigger("Checkpoint_Storage", Vector3(3400, 2800, 200), Vector3(300, 120, 200),
 		Vector4(3400, 1500, 0, 90), Vector4(3400, 2900, 0, 180))
 	_trigger("Checkpoint_CorridorC", Vector3(1000, 2960, 175), Vector3(60, 150, 175),
@@ -245,25 +249,40 @@ func _gameplay() -> void:
 	safe.position = ue(-2600, 2950, 300)
 	safe.set("extent", ue(800, 900, 300))
 	safe.set("message", "It won't follow you into the open. Not yet.")
+	safe.set("next_level", "res://scenes/jungle.tscn")
 
 	# Pickups.
 	for b in [["Battery_Lobby", ue(-350, -250, 120)], ["Battery_Ward", ue(3650, 450, 40)], ["Battery_Storage", ue(3150, 3300, 40)]]:
 		var pickup: Area3D = _add(BatteryScript.new(), "Gameplay")
 		pickup.name = b[0]
 		pickup.position = b[1]
+		pickup.set("pickup_sound", Audio.sfx("pickup"))
 
 	# Player, pursuer, music.
 	var player: CharacterBody3D = _add(PlayerScript.new(), "Gameplay")
 	player.name = "Player"
 	player.position = ue(-600, 0, 0)
 	player.rotation.y = _yaw(0.0)
+	Audio.setup_player(player)
 
 	var pursuer: CharacterBody3D = _add(PursuerScript.new(), "Gameplay")
 	pursuer.name = "Pursuer"
 	pursuer.position = ue(-700, 300, 0)
+	Audio.setup_pursuer(pursuer)
 
 	var music: Node = _add(MusicScript.new(), "Gameplay")
 	music.name = "MusicDirector"
+	Audio.setup_music(music, "building")
+
+
+func get_node_or_null_trigger(label: String) -> Node:
+	return _folder("Gameplay").get_node(label)
+
+
+func _door_sounds(door: Node) -> void:
+	door.set("slam_sound", Audio.sfx("door_slam"))
+	door.set("creak_sound", Audio.sfx("creak"))
+	door.set("break_sound", Audio.sfx("door_break"))
 
 
 ## pursuer_world / respawn_world are (x, y, z, yaw) at floor level, in Unreal units.

@@ -7,10 +7,14 @@ extends Node
 @export var layers: Array[MusicLayer] = []
 @export var ambience: AudioStream
 @export var heartbeat: AudioStream
+## The ambience falls silent while the pursuer is in the open this close, even
+## before a chase: in the jungle, the insects stop.
+@export var ambience_cut_distance := 25.0
 
 var _layer_players: Array[AudioStreamPlayer] = []
 var _ambience_player: AudioStreamPlayer
 var _heartbeat_player: AudioStreamPlayer
+var _ambience_cut := 1.0
 
 
 func _ready() -> void:
@@ -31,8 +35,13 @@ func _start_loop(stream: AudioStream) -> AudioStreamPlayer:
 	return p
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	var danger := Chase.danger
+	var pursuer := Chase.pursuer
+	var near := is_instance_valid(pursuer) and not pursuer.concealed and is_instance_valid(Chase.player) \
+		and pursuer.global_position.distance_to(Chase.player.global_position) < ambience_cut_distance
+	# Cuts out fast, creeps back slowly.
+	_ambience_cut = Chase.finterp(_ambience_cut, 0.04 if near else 1.0, delta, 3.0 if near else 0.4)
 	for i in mini(layers.size(), _layer_players.size()):
 		var p := _layer_players[i]
 		if p == null:
@@ -42,7 +51,7 @@ func _process(_delta: float) -> void:
 		var t := clampf((danger - layer.fade_in_start) / span, 0.0, 1.0)
 		p.volume_db = linear_to_db(maxf(0.001, smoothstep(0.0, 1.0, t) * layer.max_volume))
 	if _ambience_player:
-		_ambience_player.volume_db = linear_to_db(maxf(0.001, 1.0 - danger * 0.95))
+		_ambience_player.volume_db = linear_to_db(maxf(0.001, (1.0 - danger * 0.95) * _ambience_cut))
 	if _heartbeat_player:
 		_heartbeat_player.volume_db = linear_to_db(maxf(0.001, (danger - 0.3) / 0.7))
 		_heartbeat_player.pitch_scale = lerpf(0.9, 1.5, danger)

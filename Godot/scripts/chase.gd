@@ -70,6 +70,9 @@ func _process(delta: float) -> void:
 		elif pursuer.state == Pursuer.State.LOST:
 			# You can't see it, but it's still out there.
 			target = 0.35
+	elif is_instance_valid(pursuer) and pursuer.state == Pursuer.State.STALKING:
+		# Being watched: low dread, a spike while it's in sight.
+		target = 0.12 if pursuer.concealed else 0.3
 	# Rise fast, fall slowly: relief should take a moment to arrive.
 	danger = finterp(danger, target, delta, 4.0 if target > danger else 1.0)
 
@@ -119,6 +122,17 @@ func restart_from_checkpoint() -> void:
 	chase_active = true
 	danger = 0.0
 	_schedule_pursuer(restart_grace, _activate_pursuer)
+
+
+## Brings a lost pursuer back at `where` (it climbed out, or went round).
+func ambush(where: Transform3D, delay: float) -> void:
+	if not chase_active or not is_instance_valid(pursuer) or pursuer.state != Pursuer.State.LOST:
+		return
+	var p := pursuer
+	_schedule_pursuer(delay, func() -> void:
+		if is_instance_valid(p) and p.state == Pursuer.State.LOST:
+			p.reappear(where)
+	)
 
 
 func _activate_pursuer() -> void:

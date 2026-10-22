@@ -82,8 +82,11 @@ func _draw_hud() -> void:
 func _centered_text(text: String, center_x: float, y: float, color: Color, s: float) -> void:
 	var font := ThemeDB.fallback_font
 	var font_size := int(26.0 * s)
-	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
-	_canvas.draw_string(font, Vector2(center_x - width * 0.5, y), text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
+	var lines := text.split("\n")
+	for i in lines.size():
+		var width := font.get_string_size(lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+		_canvas.draw_string(font, Vector2(center_x - width * 0.5, y + i * font_size * 1.3), lines[i],
+			HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
 
 
 func _bar(x: float, y: float, w: float, h: float, fill: float, color: Color) -> void:

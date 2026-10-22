@@ -13,6 +13,7 @@ enum State {
 	LOST,        ## Player slipped into a crawlspace.
 	RETREATING,  ## Player reached a safe zone.
 	FEEDING,     ## Caught the player.
+	STALKING,    ## Before a chase: shows itself at a distance, vanishes when seen.
 }
 
 @export_group("Chase")
@@ -33,6 +34,17 @@ enum State {
 @export var stun_cooldown := 3.5
 ## How long it lingers at a crawlspace before vanishing to go round.
 @export var lost_conceal_delay := 2.5
+## Falling below this height (a chasm) loses the player until an ambush.
+@export var fall_lose_height := -6.0
+
+@export_group("Stalking")
+## How far from the player it chooses to appear.
+@export var stalk_min_distance := 7.0
+@export var stalk_max_distance := 28.0
+## Seconds of being looked at before it vanishes.
+@export var stalk_seen_time := 0.6
+## It vanishes if you get this close.
+@export var stalk_flee_distance := 7.0
 
 @export_group("Movement")
 @export var acceleration := 30.0
@@ -45,12 +57,15 @@ enum State {
 @export var footstep_sound: AudioStream
 @export var bash_sound: AudioStream
 @export var screech_sound: AudioStream
+@export var vanish_sound: AudioStream
 @export var footstep_stride := 1.9
 
 const RADIUS := 0.6
 const HEIGHT := 2.8  # 2.8m and hunched: it fits through doorways, never through vents.
 
 var state := State.DORMANT
+## Set by terrain it's crossing (a swaying rope bridge slows it).
+var terrain_speed_scale := 1.0
 var trail_gap := INF
 var concealed := false
 
@@ -66,13 +81,10 @@ var _trail: Array[Vector3] = []
 var _trail_index := 0
 var _bash_target: ChaseDoor
 
-var _body_root: Node3D
-var _head: Node3D
-var _shoulder_left: Node3D
-var _shoulder_right: Node3D
-var _leg_left: Node3D
-var _leg_right: Node3D
-var _eye_glow: OmniLight3D
+var _stalk_points: Array[Node3D] = []
+var _stalk_wait := 0.0
+var _stalk_seen := 0.0
+var body: CreatureBody
 
 
 func _ready() -> void:
@@ -85,73 +97,12 @@ func _ready() -> void:
 	collider.shape = shape
 	collider.position.y = HEIGHT * 0.5
 	add_child(collider)
-	_build_body()
+	body = CreatureBody.new()
+	add_child(body)
 
 	Chase.register_pursuer(self)
 	_set_concealed(true)
 	_enter_state(State.DORMANT)
-
-
-func _build_body() -> void:
-	var skin := Color(0.012, 0.012, 0.015)
-	var bone := Color(0.22, 0.19, 0.15)
-
-	_body_root = Node3D.new()
-	_body_root.position.y = HEIGHT * 0.5
-	add_child(_body_root)
-
-	var torso := Greybox.cylinder(0.5, 1.0, skin)
-	torso.position = Vector3(0.0, 0.25, -0.08)
-	torso.scale = Vector3(0.75, 1.4, 0.9)
-	torso.rotation_degrees.x = -15.0
-	_body_root.add_child(torso)
-
-	_head = Node3D.new()
-	_head.position = Vector3(0.0, 1.08, -0.42)
-	_body_root.add_child(_head)
-	var skull := Greybox.sphere(0.5, skin)
-	skull.scale = Vector3(0.5, 0.6, 0.55)
-	_head.add_child(skull)
-	for side in [-1.0, 1.0]:
-		var horn := Greybox.cylinder(0.065, 0.54, bone, 0.0)
-		horn.position = Vector3(0.15 * side, 0.42, 0.055)
-		horn.rotation_degrees.z = -25.0 * side
-		_head.add_child(horn)
-		var eye := Greybox.sphere(0.03, Color.BLACK)
-		eye.material_override = Greybox.material(Color.BLACK, Color(1.0, 0.16, 0.08) * 4.0)
-		eye.position = Vector3(0.08 * side, 0.05, -0.25)
-		_head.add_child(eye)
-
-	_eye_glow = OmniLight3D.new()
-	_eye_glow.position = Vector3(0.0, 0.06, -0.4)
-	_eye_glow.light_color = Color8(255, 40, 20)
-	_eye_glow.omni_range = 1.8
-	_eye_glow.light_energy = 1.0
-	_head.add_child(_eye_glow)
-
-	# Arms far too long for its body.
-	_shoulder_left = _make_limb_pivot(Vector3(-0.55, 0.8, -0.15))
-	_shoulder_right = _make_limb_pivot(Vector3(0.55, 0.8, -0.15))
-	for shoulder in [_shoulder_left, _shoulder_right]:
-		var arm := Greybox.box(Vector3(0.17, 1.6, 0.17), skin)
-		arm.position.y = -0.8
-		shoulder.add_child(arm)
-
-	_leg_left = Greybox.cylinder(0.5, 1.0, skin)
-	_leg_left.position = Vector3(-0.28, -0.92, 0.0)
-	_leg_left.scale = Vector3(0.32, 0.95, 0.32)
-	_body_root.add_child(_leg_left)
-	_leg_right = Greybox.cylinder(0.5, 1.0, skin)
-	_leg_right.position = Vector3(0.28, -0.92, 0.0)
-	_leg_right.scale = Vector3(0.32, 0.95, 0.32)
-	_body_root.add_child(_leg_right)
-
-
-func _make_limb_pivot(at: Vector3) -> Node3D:
-	var pivot := Node3D.new()
-	pivot.position = at
-	_body_root.add_child(pivot)
-	return pivot
 
 
 # ---------------------------------------------------------------------------
@@ -205,6 +156,16 @@ func retreat() -> void:
 	_enter_state(State.RETREATING)
 
 
+## Starts shadowing the player from these points until a chase begins.
+func begin_stalk(points: Array[Node3D]) -> void:
+	if state != State.DORMANT:
+		return
+	_stalk_points = points
+	_set_concealed(true)
+	_enter_state(State.STALKING)
+	_stalk_wait = 1.5
+
+
 func is_active_threat() -> bool:
 	if concealed:
 		return false
@@ -212,7 +173,7 @@ func is_active_threat() -> bool:
 
 
 func get_head_position() -> Vector3:
-	return _head.global_position
+	return body.get_head_position()
 
 
 func get_center_position() -> Vector3:
@@ -267,6 +228,10 @@ func _physics_process(delta: float) -> void:
 			if not concealed and _state_time >= lost_conceal_delay:
 				_set_concealed(true)
 
+		State.STALKING:
+			if is_instance_valid(player):
+				_update_stalk(player, delta)
+
 		State.RETREATING:
 			if is_instance_valid(player):
 				_move_dir = global_position - player.global_position
@@ -278,8 +243,14 @@ func _physics_process(delta: float) -> void:
 
 	if concealed:
 		return
+	if global_position.y < fall_lose_height and state != State.LOST:
+		# Fell into a chasm. It will climb back out somewhere else.
+		_play(screech_sound)
+		_enter_state(State.LOST)
+		_set_concealed(true)
+		return
 	_move(delta)
-	_animate(delta)
+	body.animate(delta, state, _state_time, Vector2(velocity.x, velocity.z).length())
 
 	var speed := Vector2(velocity.x, velocity.z).length()
 	if is_on_floor() and speed > 0.5:
@@ -335,6 +306,59 @@ func _teleport(where: Transform3D) -> void:
 	global_position = where.origin
 	rotation = Vector3(0.0, where.basis.get_euler().y, 0.0)
 	velocity = Vector3.ZERO
+	body.reset_particles()
+
+
+# ---------------------------------------------------------------------------
+# Stalking
+# ---------------------------------------------------------------------------
+
+func _update_stalk(player: RelentlessPlayer, delta: float) -> void:
+	if concealed:
+		_stalk_wait -= delta
+		if _stalk_wait <= 0.0:
+			_try_appear(player)
+		return
+
+	var to_player := player.global_position - global_position
+	rotation.y = Chase.facing(Vector3(to_player.x, 0.0, to_player.z))
+	var head := get_head_position()
+	var eye := player.get_eye_position()
+	var seen := false
+	if player.camera.is_position_in_frustum(head) and eye.distance_to(head) < stalk_max_distance + 5.0:
+		var query := PhysicsRayQueryParameters3D.create(eye, head, Chase.LAYER_WORLD)
+		seen = get_world_3d().direct_space_state.intersect_ray(query).is_empty()
+	# A flashlight on it drives it off faster.
+	_stalk_seen += delta * (0.0 if not seen else (2.0 if player.flashlight_on else 1.0))
+	if _stalk_seen >= stalk_seen_time or to_player.length() < stalk_flee_distance or _state_time > 9.0:
+		Chase.play_at(vanish_sound, head, 0.8)
+		_set_concealed(true)
+		_stalk_wait = randf_range(3.5, 7.0)
+
+
+## Shows itself at a stalk point the player isn't looking at, at a distance.
+func _try_appear(player: RelentlessPlayer) -> void:
+	var forward := -player.global_basis.z
+	var beside: Array[Node3D] = []
+	var behind: Array[Node3D] = []
+	for p in _stalk_points:
+		var offset := p.global_position - player.global_position
+		var d := offset.length()
+		if d < stalk_min_distance or d > stalk_max_distance:
+			continue
+		if player.camera.is_position_in_frustum(p.global_position + Vector3.UP * 1.5):
+			continue  # Never pops in where you're looking.
+		# Prefer just out of view to the side, where a glance will catch it.
+		(beside if offset.normalized().dot(forward) > -0.3 else behind).append(p)
+	var candidates := beside if not beside.is_empty() else behind
+	if candidates.is_empty():
+		_stalk_wait = 1.0
+		return
+	var pick: Node3D = candidates.pick_random()
+	_teleport(pick.global_transform)
+	_set_concealed(false)
+	_enter_state(State.STALKING)
+	_stalk_seen = 0.0
 
 
 # ---------------------------------------------------------------------------
@@ -368,7 +392,7 @@ func _update_speed(player: RelentlessPlayer) -> void:
 	var s := lerpf(near_speed_scale, far_speed_scale, t)
 	if player.exhausted:
 		s *= exhaustion_mercy
-	_max_speed = player.sprint_speed * s
+	_max_speed = player.sprint_speed * s * terrain_speed_scale
 
 
 func _check_catch(player: RelentlessPlayer) -> bool:
@@ -441,49 +465,6 @@ func _follow_trail(player: RelentlessPlayer, delta: float) -> void:
 
 static func _flat_distance(a: Vector3, b: Vector3) -> float:
 	return Vector2(a.x - b.x, a.z - b.z).length()
-
-
-# ---------------------------------------------------------------------------
-# Procedural greybox animation
-# ---------------------------------------------------------------------------
-
-func _animate(delta: float) -> void:
-	var speed := Vector2(velocity.x, velocity.z).length()
-	var swing := clampf(speed / 6.0, 0.0, 1.0)
-	_anim_phase += delta * (speed / 1.1 + 0.6)
-
-	var left_arm := sin(_anim_phase) * 50.0 * swing
-	var right_arm := -left_arm
-	var head_roll := 0.0
-	var eye_energy := 1.0
-
-	match state:
-		State.BASHING:
-			left_arm = 120.0 + sin(_state_time * 10.0) * 45.0
-			right_arm = 120.0 + sin(_state_time * 10.0 + PI) * 45.0
-			eye_energy = 2.0
-		State.STUNNED:
-			# Shielding its face from the light.
-			left_arm = 150.0
-			right_arm = 140.0
-			head_roll = Chase.perlin(_state_time * 20.0) * 30.0
-			eye_energy = 6.0
-		State.FEEDING:
-			left_arm = 85.0
-			right_arm = 85.0
-			eye_energy = 4.0
-		State.LOST:
-			left_arm = 60.0 + sin(_state_time * 6.0) * 30.0
-			right_arm = 60.0 + sin(_state_time * 6.0 + 1.0) * 30.0
-			head_roll = sin(_state_time * 3.0) * 20.0
-
-	_shoulder_left.rotation_degrees = Vector3(left_arm, 0.0, -8.0)
-	_shoulder_right.rotation_degrees = Vector3(right_arm, 0.0, 8.0)
-	_leg_left.rotation_degrees.x = -sin(_anim_phase) * 25.0 * swing
-	_leg_right.rotation_degrees.x = sin(_anim_phase) * 25.0 * swing
-	_head.rotation_degrees.z = head_roll
-	_body_root.position.y = HEIGHT * 0.5 + absf(sin(_anim_phase)) * 0.08 * swing
-	_eye_glow.light_energy = Chase.finterp(_eye_glow.light_energy, eye_energy, delta, 8.0)
 
 
 func _play(stream: AudioStream, volume := 1.0) -> void:

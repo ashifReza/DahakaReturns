@@ -9,6 +9,9 @@ extends ZoneArea
 ## Where the player comes back after dying past this point.
 @export var player_respawn: Marker3D
 @export var activation_delay := 0.4
+## If the pursuer is lost (fell, or you crawled away), bring it back at
+## pursuer_start after activation_delay. Also sets the checkpoint.
+@export var ambush := false
 @export_multiline var hint := ""
 @export var hint_duration := 4.0
 @export var stinger: AudioStream
@@ -33,3 +36,5 @@ func _player_entered(player: RelentlessPlayer) -> void:
 	Chase.play_2d(stinger)
 	if starts_chase:
 		Chase.start_chase(self)
+	if ambush:
+		Chase.ambush(get_pursuer_start(), activation_delay)

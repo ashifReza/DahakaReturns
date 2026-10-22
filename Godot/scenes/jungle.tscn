@@ -1,0 +1,1732 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/level.gd" id="1_sf3x0"]
+[ext_resource type="Script" path="res://scripts/forest.gd" id="2_ykm7x"]
+[ext_resource type="AudioStream" path="res://audio/sfx/rustle.wav" id="3_3aene"]
+[ext_resource type="Script" path="res://scripts/rope_bridge.gd" id="4_1l04d"]
+[ext_resource type="AudioStream" path="res://audio/sfx/rope_snap.wav" id="5_xlkky"]
+[ext_resource type="AudioStream" path="res://audio/sfx/bridge_collapse.wav" id="6_175eb"]
+[ext_resource type="Shader" path="res://shaders/water.gdshader" id="7_ujyxb"]
+[ext_resource type="Shader" path="res://shaders/waterfall.gdshader" id="8_6vx31"]
+[ext_resource type="AudioStream" path="res://audio/ambience/water.wav" id="9_wv54a"]
+[ext_resource type="Script" path="res://scripts/player.gd" id="10_vietd"]
+[ext_resource type="AudioStream" path="res://audio/sfx/click.wav" id="11_r8lbt"]
+[ext_resource type="AudioStream" path="res://audio/sfx/death.wav" id="12_rthv4"]
+[ext_resource type="Script" path="res://scripts/pursuer.gd" id="13_05hb8"]
+[ext_resource type="AudioStream" path="res://audio/sfx/roar.wav" id="14_5hoio"]
+[ext_resource type="AudioStream" path="res://audio/sfx/footstep.wav" id="15_w3m7c"]
+[ext_resource type="AudioStream" path="res://audio/sfx/bash.wav" id="16_5gq52"]
+[ext_resource type="AudioStream" path="res://audio/sfx/screech.wav" id="17_jpp7x"]
+[ext_resource type="AudioStream" path="res://audio/sfx/whoosh.wav" id="18_gtqes"]
+[ext_resource type="Script" path="res://scripts/music_director.gd" id="19_5dgmb"]
+[ext_resource type="Script" path="res://scripts/music_layer.gd" id="20_v8lep"]
+[ext_resource type="AudioStream" path="res://audio/music/chase_drone.wav" id="21_nxhmj"]
+[ext_resource type="AudioStream" path="res://audio/music/chase_percussion.wav" id="22_ulct2"]
+[ext_resource type="AudioStream" path="res://audio/music/chase_riff.wav" id="23_dfphc"]
+[ext_resource type="AudioStream" path="res://audio/music/chase_choir.wav" id="24_1cvjn"]
+[ext_resource type="AudioStream" path="res://audio/ambience/jungle.wav" id="25_jg82f"]
+[ext_resource type="AudioStream" path="res://audio/music/heartbeat.wav" id="26_judak"]
+[ext_resource type="Script" path="res://scripts/stalk_zone.gd" id="27_6c72a"]
+[ext_resource type="Script" path="res://scripts/chase_trigger.gd" id="28_bvol4"]
+[ext_resource type="AudioStream" path="res://audio/sfx/stinger.wav" id="29_v6a36"]
+[ext_resource type="Script" path="res://scripts/vent_zone.gd" id="30_papy4"]
+[ext_resource type="Script" path="res://scripts/kill_zone.gd" id="31_at0t2"]
+[ext_resource type="Script" path="res://scripts/safe_zone.gd" id="32_8p0p5"]
+[ext_resource type="Script" path="res://scripts/battery_pickup.gd" id="33_em0o5"]
+[ext_resource type="AudioStream" path="res://audio/sfx/pickup.wav" id="34_746s5"]
+
+[sub_resource type="Environment" id="Environment_st1n8"]
+background_mode = 1
+background_color = Color(0.006, 0.01, 0.016, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.02, 0.035, 0.03, 1)
+ambient_light_energy = 0.6
+tonemap_mode = 2
+glow_enabled = true
+glow_intensity = 0.6
+glow_bloom = 0.05
+fog_enabled = true
+fog_light_color = Color(0.004, 0.008, 0.007, 1)
+fog_density = 0.025
+volumetric_fog_enabled = true
+volumetric_fog_density = 0.012
+volumetric_fog_albedo = Color(0.5, 0.6, 0.55, 1)
+volumetric_fog_length = 40.0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hb4ov"]
+albedo_color = Color(0.035, 0.03, 0.02, 1)
+roughness = 0.95
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hqch0"]
+albedo_color = Color(0.05, 0.05, 0.055, 1)
+roughness = 0.95
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_2pbhx"]
+albedo_color = Color(0.09, 0.065, 0.045, 1)
+roughness = 0.95
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_rvbbl"]
+render_priority = 0
+shader = ExtResource("7_ujyxb")
+shader_parameter/deep_color = null
+shader_parameter/flow_speed = null
+shader_parameter/flow_direction = null
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_smfdu"]
+material = SubResource("ShaderMaterial_rvbbl")
+size = Vector2(110, 26)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_0tdkd"]
+render_priority = 0
+shader = ExtResource("8_6vx31")
+shader_parameter/color = null
+shader_parameter/speed = null
+
+[sub_resource type="QuadMesh" id="QuadMesh_2fmsx"]
+material = SubResource("ShaderMaterial_0tdkd")
+size = Vector2(7, 14)
+
+[sub_resource type="Gradient" id="Gradient_tojl6"]
+offsets = PackedFloat32Array(0, 0.3, 0.7, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_jnw10"]
+gradient = SubResource("Gradient_tojl6")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_fjaiy"]
+emission_shape = 3
+emission_box_extents = Vector3(4, 0.5, 1)
+direction = Vector3(0, 1, 0)
+spread = 180.0
+initial_velocity_min = 0.05
+initial_velocity_max = 0.3
+gravity = Vector3(0, 0.3, 0.4)
+color_ramp = SubResource("GradientTexture1D_jnw10")
+
+[sub_resource type="Gradient" id="Gradient_p0o87"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_gj6f2"]
+gradient = SubResource("Gradient_p0o87")
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ioqi0"]
+transparency = 1
+shading_mode = 0
+vertex_color_use_as_albedo = true
+albedo_color = Color(0.6, 0.7, 0.75, 0.25)
+albedo_texture = SubResource("GradientTexture2D_gj6f2")
+billboard_mode = 3
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
+
+[sub_resource type="QuadMesh" id="QuadMesh_blf1f"]
+material = SubResource("StandardMaterial3D_ioqi0")
+size = Vector2(0.9, 0.9)
+
+[sub_resource type="Resource" id="Resource_d6mlu"]
+script = ExtResource("20_v8lep")
+stream = ExtResource("21_nxhmj")
+fade_in_end = 0.2
+max_volume = 0.7
+
+[sub_resource type="Resource" id="Resource_kvswn"]
+script = ExtResource("20_v8lep")
+stream = ExtResource("22_ulct2")
+fade_in_start = 0.2
+fade_in_end = 0.5
+max_volume = 0.8
+
+[sub_resource type="Resource" id="Resource_xei1k"]
+script = ExtResource("20_v8lep")
+stream = ExtResource("23_dfphc")
+fade_in_start = 0.4
+fade_in_end = 0.7
+max_volume = 0.75
+
+[sub_resource type="Resource" id="Resource_js44s"]
+script = ExtResource("20_v8lep")
+stream = ExtResource("24_1cvjn")
+fade_in_start = 0.7
+fade_in_end = 0.95
+max_volume = 0.7
+
+[sub_resource type="Gradient" id="Gradient_240qw"]
+offsets = PackedFloat32Array(0, 0.3, 0.7, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_cphdu"]
+gradient = SubResource("Gradient_240qw")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_ukisw"]
+emission_shape = 3
+emission_box_extents = Vector3(9, 2.5, 9)
+direction = Vector3(0, 1, 0)
+spread = 180.0
+initial_velocity_min = 0.05
+initial_velocity_max = 0.3
+gravity = Vector3(0, 0, 0)
+color_ramp = SubResource("GradientTexture1D_cphdu")
+turbulence_enabled = true
+turbulence_noise_strength = 0.6
+turbulence_noise_speed_random = 0.5
+
+[sub_resource type="Gradient" id="Gradient_byxr5"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_g3uqv"]
+gradient = SubResource("Gradient_byxr5")
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_qu4j8"]
+transparency = 1
+blend_mode = 1
+shading_mode = 0
+vertex_color_use_as_albedo = true
+albedo_color = Color(1.75, 2.5, 0.875, 2.5)
+albedo_texture = SubResource("GradientTexture2D_g3uqv")
+billboard_mode = 3
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
+
+[sub_resource type="QuadMesh" id="QuadMesh_u6q2t"]
+material = SubResource("StandardMaterial3D_qu4j8")
+size = Vector2(0.06, 0.06)
+
+[sub_resource type="Gradient" id="Gradient_af7d6"]
+offsets = PackedFloat32Array(0, 0.3, 0.7, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_t016d"]
+gradient = SubResource("Gradient_af7d6")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_r1gxu"]
+emission_shape = 3
+emission_box_extents = Vector3(9, 2.5, 9)
+direction = Vector3(0, 1, 0)
+spread = 180.0
+initial_velocity_min = 0.05
+initial_velocity_max = 0.3
+gravity = Vector3(0, 0, 0)
+color_ramp = SubResource("GradientTexture1D_t016d")
+turbulence_enabled = true
+turbulence_noise_strength = 0.6
+turbulence_noise_speed_random = 0.5
+
+[sub_resource type="Gradient" id="Gradient_do31p"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_jxomw"]
+gradient = SubResource("Gradient_do31p")
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_6502t"]
+transparency = 1
+blend_mode = 1
+shading_mode = 0
+vertex_color_use_as_albedo = true
+albedo_color = Color(1.75, 2.5, 0.875, 2.5)
+albedo_texture = SubResource("GradientTexture2D_jxomw")
+billboard_mode = 3
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
+
+[sub_resource type="QuadMesh" id="QuadMesh_uvaf4"]
+material = SubResource("StandardMaterial3D_6502t")
+size = Vector2(0.06, 0.06)
+
+[sub_resource type="Gradient" id="Gradient_3acfo"]
+offsets = PackedFloat32Array(0, 0.3, 0.7, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_3iahv"]
+gradient = SubResource("Gradient_3acfo")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_pycfr"]
+emission_shape = 3
+emission_box_extents = Vector3(9, 2.5, 9)
+direction = Vector3(0, 1, 0)
+spread = 180.0
+initial_velocity_min = 0.05
+initial_velocity_max = 0.3
+gravity = Vector3(0, 0, 0)
+color_ramp = SubResource("GradientTexture1D_3iahv")
+turbulence_enabled = true
+turbulence_noise_strength = 0.6
+turbulence_noise_speed_random = 0.5
+
+[sub_resource type="Gradient" id="Gradient_83vtq"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_o5vhx"]
+gradient = SubResource("Gradient_83vtq")
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1mulm"]
+transparency = 1
+blend_mode = 1
+shading_mode = 0
+vertex_color_use_as_albedo = true
+albedo_color = Color(1.75, 2.5, 0.875, 2.5)
+albedo_texture = SubResource("GradientTexture2D_o5vhx")
+billboard_mode = 3
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
+
+[sub_resource type="QuadMesh" id="QuadMesh_xsbya"]
+material = SubResource("StandardMaterial3D_1mulm")
+size = Vector2(0.06, 0.06)
+
+[sub_resource type="Gradient" id="Gradient_h01ei"]
+offsets = PackedFloat32Array(0, 0.3, 0.7, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_sgsib"]
+gradient = SubResource("Gradient_h01ei")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_8tspv"]
+emission_shape = 3
+emission_box_extents = Vector3(9, 2.5, 9)
+direction = Vector3(0, 1, 0)
+spread = 180.0
+initial_velocity_min = 0.05
+initial_velocity_max = 0.3
+gravity = Vector3(0, 0, 0)
+color_ramp = SubResource("GradientTexture1D_sgsib")
+turbulence_enabled = true
+turbulence_noise_strength = 0.6
+turbulence_noise_speed_random = 0.5
+
+[sub_resource type="Gradient" id="Gradient_mr2cf"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_kdsg3"]
+gradient = SubResource("Gradient_mr2cf")
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_8h00b"]
+transparency = 1
+blend_mode = 1
+shading_mode = 0
+vertex_color_use_as_albedo = true
+albedo_color = Color(1.75, 2.5, 0.875, 2.5)
+albedo_texture = SubResource("GradientTexture2D_kdsg3")
+billboard_mode = 3
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
+
+[sub_resource type="QuadMesh" id="QuadMesh_8pp4u"]
+material = SubResource("StandardMaterial3D_8h00b")
+size = Vector2(0.06, 0.06)
+
+[sub_resource type="Gradient" id="Gradient_jafnl"]
+offsets = PackedFloat32Array(0, 0.3, 0.7, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_c1gio"]
+gradient = SubResource("Gradient_jafnl")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_r7soc"]
+emission_shape = 3
+emission_box_extents = Vector3(9, 2.5, 9)
+direction = Vector3(0, 1, 0)
+spread = 180.0
+initial_velocity_min = 0.05
+initial_velocity_max = 0.3
+gravity = Vector3(0, 0, 0)
+color_ramp = SubResource("GradientTexture1D_c1gio")
+turbulence_enabled = true
+turbulence_noise_strength = 0.6
+turbulence_noise_speed_random = 0.5
+
+[sub_resource type="Gradient" id="Gradient_bl7vk"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_100gy"]
+gradient = SubResource("Gradient_bl7vk")
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_si3ay"]
+transparency = 1
+blend_mode = 1
+shading_mode = 0
+vertex_color_use_as_albedo = true
+albedo_color = Color(1.75, 2.5, 0.875, 2.5)
+albedo_texture = SubResource("GradientTexture2D_100gy")
+billboard_mode = 3
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
+
+[sub_resource type="QuadMesh" id="QuadMesh_oj0oi"]
+material = SubResource("StandardMaterial3D_si3ay")
+size = Vector2(0.06, 0.06)
+
+[sub_resource type="Gradient" id="Gradient_bk5r1"]
+offsets = PackedFloat32Array(0, 0.3, 0.7, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_lbjwl"]
+gradient = SubResource("Gradient_bk5r1")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_skqc3"]
+emission_shape = 3
+emission_box_extents = Vector3(9, 2.5, 9)
+direction = Vector3(0, 1, 0)
+spread = 180.0
+initial_velocity_min = 0.05
+initial_velocity_max = 0.3
+gravity = Vector3(0, 0, 0)
+color_ramp = SubResource("GradientTexture1D_lbjwl")
+turbulence_enabled = true
+turbulence_noise_strength = 0.6
+turbulence_noise_speed_random = 0.5
+
+[sub_resource type="Gradient" id="Gradient_7i3t5"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_xamvr"]
+gradient = SubResource("Gradient_7i3t5")
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ymflh"]
+transparency = 1
+blend_mode = 1
+shading_mode = 0
+vertex_color_use_as_albedo = true
+albedo_color = Color(1.75, 2.5, 0.875, 2.5)
+albedo_texture = SubResource("GradientTexture2D_xamvr")
+billboard_mode = 3
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
+
+[sub_resource type="QuadMesh" id="QuadMesh_75ykq"]
+material = SubResource("StandardMaterial3D_ymflh")
+size = Vector2(0.06, 0.06)
+
+[sub_resource type="Gradient" id="Gradient_i3wvx"]
+offsets = PackedFloat32Array(0, 0.3, 0.7, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_4s8au"]
+gradient = SubResource("Gradient_i3wvx")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_2jc2v"]
+emission_shape = 3
+emission_box_extents = Vector3(9, 2.5, 9)
+direction = Vector3(0, 1, 0)
+spread = 180.0
+initial_velocity_min = 0.05
+initial_velocity_max = 0.3
+gravity = Vector3(0, 0, 0)
+color_ramp = SubResource("GradientTexture1D_4s8au")
+turbulence_enabled = true
+turbulence_noise_strength = 0.6
+turbulence_noise_speed_random = 0.5
+
+[sub_resource type="Gradient" id="Gradient_4uemw"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_o6jld"]
+gradient = SubResource("Gradient_4uemw")
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_6yhuh"]
+transparency = 1
+blend_mode = 1
+shading_mode = 0
+vertex_color_use_as_albedo = true
+albedo_color = Color(1.75, 2.5, 0.875, 2.5)
+albedo_texture = SubResource("GradientTexture2D_o6jld")
+billboard_mode = 3
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
+
+[sub_resource type="QuadMesh" id="QuadMesh_oyyc2"]
+material = SubResource("StandardMaterial3D_6yhuh")
+size = Vector2(0.06, 0.06)
+
+[sub_resource type="Gradient" id="Gradient_hqv8n"]
+offsets = PackedFloat32Array(0, 0.3, 0.7, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_pgwhs"]
+gradient = SubResource("Gradient_hqv8n")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_imcea"]
+emission_shape = 3
+emission_box_extents = Vector3(9, 2.5, 9)
+direction = Vector3(0, 1, 0)
+spread = 180.0
+initial_velocity_min = 0.05
+initial_velocity_max = 0.3
+gravity = Vector3(0, 0, 0)
+color_ramp = SubResource("GradientTexture1D_pgwhs")
+turbulence_enabled = true
+turbulence_noise_strength = 0.6
+turbulence_noise_speed_random = 0.5
+
+[sub_resource type="Gradient" id="Gradient_4p3k8"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_qsh2g"]
+gradient = SubResource("Gradient_4p3k8")
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_mfqre"]
+transparency = 1
+blend_mode = 1
+shading_mode = 0
+vertex_color_use_as_albedo = true
+albedo_color = Color(1.75, 2.5, 0.875, 2.5)
+albedo_texture = SubResource("GradientTexture2D_qsh2g")
+billboard_mode = 3
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
+
+[sub_resource type="QuadMesh" id="QuadMesh_7yg8e"]
+material = SubResource("StandardMaterial3D_mfqre")
+size = Vector2(0.06, 0.06)
+
+[sub_resource type="Gradient" id="Gradient_a6kha"]
+offsets = PackedFloat32Array(0, 0.3, 0.7, 1)
+colors = PackedColorArray(1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_ntdue"]
+gradient = SubResource("Gradient_a6kha")
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_gcdex"]
+emission_shape = 3
+emission_box_extents = Vector3(9, 2.5, 9)
+direction = Vector3(0, 1, 0)
+spread = 180.0
+initial_velocity_min = 0.05
+initial_velocity_max = 0.3
+gravity = Vector3(0, 0, 0)
+color_ramp = SubResource("GradientTexture1D_ntdue")
+turbulence_enabled = true
+turbulence_noise_strength = 0.6
+turbulence_noise_speed_random = 0.5
+
+[sub_resource type="Gradient" id="Gradient_ryjrl"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_2mqmo"]
+gradient = SubResource("Gradient_ryjrl")
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(1, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ygf52"]
+transparency = 1
+blend_mode = 1
+shading_mode = 0
+vertex_color_use_as_albedo = true
+albedo_color = Color(1.75, 2.5, 0.875, 2.5)
+albedo_texture = SubResource("GradientTexture2D_2mqmo")
+billboard_mode = 3
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
+
+[sub_resource type="QuadMesh" id="QuadMesh_3pwvt"]
+material = SubResource("StandardMaterial3D_ygf52")
+size = Vector2(0.06, 0.06)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wj4he"]
+albedo_color = Color(0.05, 0.1, 0.1, 1)
+emission_enabled = true
+emission = Color(0.2, 0.9, 0.85, 1)
+emission_energy_multiplier = 1.5
+
+[sub_resource type="SphereMesh" id="SphereMesh_170tu"]
+radius = 0.06528252
+height = 0.06528252
+
+[sub_resource type="SphereMesh" id="SphereMesh_gcids"]
+radius = 0.104519844
+height = 0.104519844
+
+[sub_resource type="SphereMesh" id="SphereMesh_3jivu"]
+radius = 0.07928865
+height = 0.07928865
+
+[sub_resource type="SphereMesh" id="SphereMesh_t3aku"]
+radius = 0.1194412
+height = 0.1194412
+
+[sub_resource type="SphereMesh" id="SphereMesh_rrna5"]
+radius = 0.0797693
+height = 0.0797693
+
+[sub_resource type="SphereMesh" id="SphereMesh_ersme"]
+radius = 0.09878385
+height = 0.09878385
+
+[sub_resource type="SphereMesh" id="SphereMesh_mpf4c"]
+radius = 0.062205408
+height = 0.062205408
+
+[sub_resource type="SphereMesh" id="SphereMesh_mntvp"]
+radius = 0.076204985
+height = 0.076204985
+
+[sub_resource type="SphereMesh" id="SphereMesh_ae8r1"]
+radius = 0.09466174
+height = 0.09466174
+
+[sub_resource type="SphereMesh" id="SphereMesh_h5op1"]
+radius = 0.068971775
+height = 0.068971775
+
+[sub_resource type="SphereMesh" id="SphereMesh_4sx2e"]
+radius = 0.054984476
+height = 0.054984476
+
+[sub_resource type="SphereMesh" id="SphereMesh_vp7fx"]
+radius = 0.08528028
+height = 0.08528028
+
+[sub_resource type="SphereMesh" id="SphereMesh_f2okf"]
+radius = 0.06787746
+height = 0.06787746
+
+[sub_resource type="SphereMesh" id="SphereMesh_qnknx"]
+radius = 0.110059746
+height = 0.110059746
+
+[sub_resource type="SphereMesh" id="SphereMesh_yd74g"]
+radius = 0.107873164
+height = 0.107873164
+
+[sub_resource type="SphereMesh" id="SphereMesh_0ok3a"]
+radius = 0.054999165
+height = 0.054999165
+
+[sub_resource type="SphereMesh" id="SphereMesh_m00fg"]
+radius = 0.099016175
+height = 0.099016175
+
+[sub_resource type="SphereMesh" id="SphereMesh_uivus"]
+radius = 0.07424933
+height = 0.07424933
+
+[sub_resource type="SphereMesh" id="SphereMesh_mp8ix"]
+radius = 0.11992654
+height = 0.11992654
+
+[sub_resource type="SphereMesh" id="SphereMesh_p01ji"]
+radius = 0.06862731
+height = 0.06862731
+
+[sub_resource type="SphereMesh" id="SphereMesh_qi4tw"]
+radius = 0.119859025
+height = 0.119859025
+
+[sub_resource type="SphereMesh" id="SphereMesh_gkxcr"]
+radius = 0.07883555
+height = 0.07883555
+
+[sub_resource type="SphereMesh" id="SphereMesh_0gtgt"]
+radius = 0.051465116
+height = 0.051465116
+
+[sub_resource type="SphereMesh" id="SphereMesh_0wftc"]
+radius = 0.1153789
+height = 0.1153789
+
+[sub_resource type="SphereMesh" id="SphereMesh_im0xr"]
+radius = 0.10584315
+height = 0.10584315
+
+[sub_resource type="SphereMesh" id="SphereMesh_4c60w"]
+radius = 0.05799929
+height = 0.05799929
+
+[sub_resource type="SphereMesh" id="SphereMesh_hny3u"]
+radius = 0.089281276
+height = 0.089281276
+
+[sub_resource type="SphereMesh" id="SphereMesh_tkxcg"]
+radius = 0.100149244
+height = 0.100149244
+
+[sub_resource type="SphereMesh" id="SphereMesh_gho4s"]
+radius = 0.056788404
+height = 0.056788404
+
+[sub_resource type="SphereMesh" id="SphereMesh_bsq80"]
+radius = 0.11635761
+height = 0.11635761
+
+[sub_resource type="SphereMesh" id="SphereMesh_58syq"]
+radius = 0.098068476
+height = 0.098068476
+
+[sub_resource type="SphereMesh" id="SphereMesh_u6bpo"]
+radius = 0.09498857
+height = 0.09498857
+
+[sub_resource type="SphereMesh" id="SphereMesh_u63nw"]
+radius = 0.05942873
+height = 0.05942873
+
+[sub_resource type="SphereMesh" id="SphereMesh_4tail"]
+radius = 0.06626983
+height = 0.06626983
+
+[sub_resource type="SphereMesh" id="SphereMesh_krlf4"]
+radius = 0.09931961
+height = 0.09931961
+
+[sub_resource type="SphereMesh" id="SphereMesh_l0e03"]
+radius = 0.055708017
+height = 0.055708017
+
+[sub_resource type="SphereMesh" id="SphereMesh_60t0x"]
+radius = 0.11208299
+height = 0.11208299
+
+[sub_resource type="SphereMesh" id="SphereMesh_nqobg"]
+radius = 0.103222966
+height = 0.103222966
+
+[sub_resource type="SphereMesh" id="SphereMesh_erij1"]
+radius = 0.06315864
+height = 0.06315864
+
+[sub_resource type="SphereMesh" id="SphereMesh_lc8ux"]
+radius = 0.08980212
+height = 0.08980212
+
+[sub_resource type="SphereMesh" id="SphereMesh_i1k6j"]
+radius = 0.070841484
+height = 0.070841484
+
+[sub_resource type="SphereMesh" id="SphereMesh_bmwvu"]
+radius = 0.06382794
+height = 0.06382794
+
+[sub_resource type="SphereMesh" id="SphereMesh_nqo32"]
+radius = 0.117418095
+height = 0.117418095
+
+[sub_resource type="SphereMesh" id="SphereMesh_5lf7a"]
+radius = 0.11694342
+height = 0.11694342
+
+[sub_resource type="SphereMesh" id="SphereMesh_3vbab"]
+radius = 0.0969291
+height = 0.0969291
+
+[sub_resource type="SphereMesh" id="SphereMesh_an3xf"]
+radius = 0.10893351
+height = 0.10893351
+
+[sub_resource type="SphereMesh" id="SphereMesh_tsj3q"]
+radius = 0.095755644
+height = 0.095755644
+
+[sub_resource type="SphereMesh" id="SphereMesh_kfhb7"]
+radius = 0.10657202
+height = 0.10657202
+
+[sub_resource type="SphereMesh" id="SphereMesh_2b6ni"]
+radius = 0.051756885
+height = 0.051756885
+
+[sub_resource type="SphereMesh" id="SphereMesh_g2i0i"]
+radius = 0.053264875
+height = 0.053264875
+
+[sub_resource type="SphereMesh" id="SphereMesh_l8ypy"]
+radius = 0.055463046
+height = 0.055463046
+
+[sub_resource type="SphereMesh" id="SphereMesh_b2opj"]
+radius = 0.09869309
+height = 0.09869309
+
+[sub_resource type="SphereMesh" id="SphereMesh_ixy5c"]
+radius = 0.11470789
+height = 0.11470789
+
+[sub_resource type="SphereMesh" id="SphereMesh_ybe32"]
+radius = 0.09952433
+height = 0.09952433
+
+[sub_resource type="SphereMesh" id="SphereMesh_rrx5h"]
+radius = 0.07235947
+height = 0.07235947
+
+[sub_resource type="SphereMesh" id="SphereMesh_6g7tv"]
+radius = 0.11598401
+height = 0.11598401
+
+[node name="Jungle" type="Node3D" unique_id=487718941]
+script = ExtResource("1_sf3x0")
+
+[node name="Environment" type="Node3D" parent="." unique_id=513561253]
+
+[node name="Moonlight" type="DirectionalLight3D" parent="Environment" unique_id=716738655]
+transform = Transform3D(0.90630776, -0.33302772, 0.2601898, 0, 0.6156615, 0.7880107, -0.42261827, -0.71418023, 0.5579788, 0, 0, 0)
+light_color = Color(0.55, 0.65, 1, 1)
+light_energy = 0.35
+light_volumetric_fog_energy = 2.0
+directional_shadow_mode = 1
+directional_shadow_max_distance = 35.0
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="Environment" unique_id=585896965]
+environment = SubResource("Environment_st1n8")
+
+[node name="Terrain" type="Node3D" parent="." unique_id=1539914594]
+
+[node name="Ground_Near" type="CSGBox3D" parent="Terrain" unique_id=344136737]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, -25, -78.5)
+use_collision = true
+collision_mask = 0
+size = Vector3(110, 50, 187)
+material = SubResource("StandardMaterial3D_hb4ov")
+
+[node name="Ground_Far" type="CSGBox3D" parent="Terrain" unique_id=1586699981]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, -25, -227)
+use_collision = true
+collision_mask = 0
+size = Vector3(110, 50, 62)
+material = SubResource("StandardMaterial3D_hb4ov")
+
+[node name="RiverBed" type="CSGBox3D" parent="Terrain" unique_id=1042815261]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, -25.8, -271)
+use_collision = true
+collision_mask = 0
+size = Vector3(110, 50, 26)
+material = SubResource("StandardMaterial3D_hb4ov")
+
+[node name="Ground_FarBank" type="CSGBox3D" parent="Terrain" unique_id=984401756]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, -25, -299)
+use_collision = true
+collision_mask = 0
+size = Vector3(110, 50, 30)
+material = SubResource("StandardMaterial3D_hb4ov")
+
+[node name="Chasm_Floor" type="CSGBox3D" parent="Terrain" unique_id=254033559]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, -46, -184)
+use_collision = true
+collision_mask = 0
+size = Vector3(110, 2, 24)
+material = SubResource("StandardMaterial3D_hqch0")
+
+[node name="Lip_-196_0" type="CSGBox3D" parent="Terrain" unique_id=326322971]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -44.817673, 0.5010312, -195.4)
+collision_mask = 0
+size = Vector3(2.0621836, 1.4020624, 1.2)
+material = SubResource("StandardMaterial3D_hqch0")
+
+[node name="Lip_-196_1" type="CSGBox3D" parent="Terrain" unique_id=1195823977]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -37.057888, 0.51201165, -195.4)
+collision_mask = 0
+size = Vector3(2.9448166, 1.4240233, 1.2)
+material = SubResource("StandardMaterial3D_hqch0")
+
+[node name="Lip_-196_2" type="CSGBox3D" parent="Terrain" unique_id=2103506112]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -31.06652, 0.042082135, -195.4)
+collision_mask = 0
+size = Vector3(2.652204, 0.48416427, 1.2)
+material = SubResource("StandardMaterial3D_hqch0")
+
+[node name="Lip_-196_3" type="CSGBox3D" parent="Terrain" unique_id=1592827731]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -25.220299, 0.5915447, -195.4)
+collision_mask = 0
+size = Vector3(1.8822591, 1.5830894, 1.2)
+material = SubResource("StandardMaterial3D_hqch0")
+
+[node name="Lip_-196_4" type="CSGBox3D" parent="Terrain" unique_id=1087602692]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -19.971252, 0.39101648, -195.4)
+collision_mask = 0
+size = Vector3(3.4474273, 1.182033, 1.2)
+material = SubResource("StandardMaterial3D_hqch0")
+
+[node name="Lip_-196_5" type="CSGBox3D" parent="Terrain" unique_id=2007320743]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.300588, 0.20161526, -195.4)
+collision_mask = 0
+size = Vector3(3.0574756, 0.8032305, 1.2)
+material = SubResource("StandardMaterial3D_hqch0")
+
+[node name="Lip_-196_6" type="CSGBox3D" parent="Terrain" unique_id=2052292621]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.112568, 0.4949218, -195.4)
+collision_mask = 0
+size = Vector3(2.6943755, 1.3898436, 1.2)
+material = SubResource("StandardMaterial3D_hqch0")
+
+[node name="Lip_-196_7" type="CSGBox3D" parent="Terrain" unique_id=10490170]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.257302, 0.599752, -195.4)
+collision_mask = 0
+size = Vector3(3.138132, 1.599504, 1.2)
+material = SubResource("StandardMaterial3D_hqch0")
+
+[node name="Lip_-196_9" type="CSGBox3D" parent="Terrain" unique_id=1912157819]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 13.265624, 0.09711377, -195.4)
+collision_mask = 0
+size = Vector3(3.421228, 0.59422755, 1.2)
+material = SubResource("StandardMaterial3D_hqch0")
+
+[node name="Lip_-196_10" type="CSGBox3D" parent="Terrain" unique_id=660256213]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20.090784, 0.05040567, -195.4)
+collision_mask = 0
+size = Vector3(2.238546, 0.50081134, 1.2)
+material = SubResource("StandardMaterial3D_hqch0")
+
+[node name="Lip_-196_11" type="CSGBox3D" parent="Terrain" unique_id=414805322]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26.34388, 0.26971614, -195.4)
+collision_mask = 0
+size = Vector3(1.8377167, 0.93943226, 1.2)
+material = SubResource("StandardMaterial3D_hqch0")
+
+[node name="Lip_-196_12" type="CSGBox3D" parent="Terrain" unique_id=1126174761]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 32.640785, 0.19519518, -195.4)
+collision_mask = 0
+size = Vector3(2.7714624, 0.7903904, 1.2)
+material = SubResource("StandardMaterial3D_hqch0")
+
+[node name="Lip_-196_13" type="CSGBox3D" parent="Terrain" unique_id=145160907]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 39.274944, 0.5788138, -195.4)
+collision_mask = 0
+size = Vector3(2.47001, 1.5576276, 1.2)
+material = SubResource("StandardMaterial3D_hqch0")
+
+[node name="Lip_-196_14" type="CSGBox3D" parent="Terrain" unique_id=604001178]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 47.433376, 0.24600445, -195.4)
+collision_mask = 0
+size = Vector3(2.0773084, 0.8920089, 1.2)
+material = SubResource("StandardMaterial3D_hqch0")
+
+[node name="Lip_-196_15" type="CSGBox3D" parent="Terrain" unique_id=914839883]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 51.13923, 0.23891492, -195.4)
+collision_mask = 0
+size = Vector3(1.9283473, 0.87782985, 1.2)
+material = SubResource("StandardMaterial3D_hqch0")
+
+[node name="Lip_-172_0" type="CSGBox3D" parent="Terrain" unique_id=1740017531]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -43.93802, 0.43202, -172.6)
+collision_mask = 0
+size = Vector3(1.8387824, 1.26404, 1.2)
+material = SubResource("StandardMaterial3D_hqch0")
+
+[node name="Lip_-172_1" type="CSGBox3D" parent="Terrain" unique_id=945043768]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -39.424236, 0.52017456, -172.6)
+collision_mask = 0
+size = Vector3(3.079809, 1.4403491, 1.2)
+material = SubResource("StandardMaterial3D_hqch0")
+
+[node name="Lip_-172_2" type="CSGBox3D" parent="Terrain" unique_id=1325102931]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -31.112013, 0.10324146, -172.6)
+collision_mask = 0
+size = Vector3(1.8447874, 0.6064829, 1.2)
+material = SubResource("StandardMaterial3D_hqch0")
+
+[node name="Lip_-172_3" type="CSGBox3D" parent="Terrain" unique_id=312182729]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -24.731506, 0.43699646, -172.6)
+collision_mask = 0
+size = Vector3(3.1428118, 1.2739929, 1.2)
+material = SubResource("StandardMaterial3D_hqch0")
+
+[node name="Lip_-172_4" type="CSGBox3D" parent="Terrain" unique_id=2130539517]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20.28199, 0.4077021, -172.6)
+collision_mask = 0
+size = Vector3(2.4648514, 1.2154042, 1.2)
+material = SubResource("StandardMaterial3D_hqch0")
+
+[node name="Lip_-172_5" type="CSGBox3D" parent="Terrain" unique_id=118266064]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12.607625, 0.37647033, -172.6)
+collision_mask = 0
+size = Vector3(2.4087892, 1.1529406, 1.2)
+material = SubResource("StandardMaterial3D_hqch0")
+
+[node name="Lip_-172_6" type="CSGBox3D" parent="Terrain" unique_id=1920745988]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.2875013, 0.21604417, -172.6)
+collision_mask = 0
+size = Vector3(3.0509276, 0.83208835, 1.2)
+material = SubResource("StandardMaterial3D_hqch0")
+
+[node name="Lip_-172_7" type="CSGBox3D" parent="Terrain" unique_id=965402661]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.4521661, 0.4223019, -172.6)
+collision_mask = 0
+size = Vector3(2.4318337, 1.2446038, 1.2)
+material = SubResource("StandardMaterial3D_hqch0")
+
+[node name="Lip_-172_9" type="CSGBox3D" parent="Terrain" unique_id=73839454]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.14732, 0.4505813, -172.6)
+collision_mask = 0
+size = Vector3(3.4364924, 1.3011626, 1.2)
+material = SubResource("StandardMaterial3D_hqch0")
+
+[node name="Lip_-172_10" type="CSGBox3D" parent="Terrain" unique_id=1203488446]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 21.283821, 0.13105111, -172.6)
+collision_mask = 0
+size = Vector3(3.2837276, 0.6621022, 1.2)
+material = SubResource("StandardMaterial3D_hqch0")
+
+[node name="Lip_-172_11" type="CSGBox3D" parent="Terrain" unique_id=281458158]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26.154247, 0.46204293, -172.6)
+collision_mask = 0
+size = Vector3(2.238553, 1.3240858, 1.2)
+material = SubResource("StandardMaterial3D_hqch0")
+
+[node name="Lip_-172_12" type="CSGBox3D" parent="Terrain" unique_id=1276127182]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 33.50567, 0.14675622, -172.6)
+collision_mask = 0
+size = Vector3(1.8455544, 0.69351244, 1.2)
+material = SubResource("StandardMaterial3D_hqch0")
+
+[node name="Lip_-172_13" type="CSGBox3D" parent="Terrain" unique_id=1876146300]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 39.400307, 0.45463902, -172.6)
+collision_mask = 0
+size = Vector3(2.0962422, 1.309278, 1.2)
+material = SubResource("StandardMaterial3D_hqch0")
+
+[node name="Lip_-172_14" type="CSGBox3D" parent="Terrain" unique_id=1789124827]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 47.364426, 0.5825621, -172.6)
+collision_mask = 0
+size = Vector3(2.5060282, 1.5651242, 1.2)
+material = SubResource("StandardMaterial3D_hqch0")
+
+[node name="Lip_-172_15" type="CSGBox3D" parent="Terrain" unique_id=2094685959]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 53.449665, 0.58028334, -172.6)
+collision_mask = 0
+size = Vector3(3.379009, 1.5605667, 1.2)
+material = SubResource("StandardMaterial3D_hqch0")
+
+[node name="Forest" type="Node3D" parent="." unique_id=471946547]
+script = ExtResource("2_ykm7x")
+path = PackedVector3Array(0, 0, 8, 0, 0, -15, 7, 0, -35, 3, 0, -55, -4, 0, -74, -8, 0, -92, -6, 0, -108, -6, 0, -127, -2, 0, -150, 6, 0, -165, 6, 0, -172, 6, 0, -196, 8, 0, -212, 0, 0, -235, -6, 0, -250, -4, 0, -266)
+gaps = Array[Vector2]([Vector2(-195.5, -172.5)])
+rustle_sound = ExtResource("3_3aene")
+
+[node name="SetPieces" type="Node3D" parent="." unique_id=940088878]
+
+[node name="FallenLog" type="CSGCylinder3D" parent="SetPieces" unique_id=507472349]
+transform = Transform3D(-4.328599e-08, -0.99026805, 0.1391731, 1, -4.371139e-08, 0, 6.0834497e-09, 0.1391731, 0.99026805, -7, 0.28, -100)
+use_collision = true
+radius = 0.32
+height = 16.0
+sides = 10
+material = SubResource("StandardMaterial3D_2pbhx")
+
+[node name="RootTangle" type="CSGBox3D" parent="SetPieces" unique_id=1050383829]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 3.15, -122)
+use_collision = true
+collision_mask = 0
+size = Vector3(18, 4, 12)
+material = SubResource("StandardMaterial3D_2pbhx")
+
+[node name="Root_0" type="CSGCylinder3D" parent="SetPieces" unique_id=1036460064]
+transform = Transform3D(0.76604444, -0.6330222, -0.11161892, 0, 0.17364822, -0.9848077, 0.6427876, 0.7544065, 0.13302225, -11, 2, -126)
+height = 14.0
+material = SubResource("StandardMaterial3D_2pbhx")
+
+[node name="Root_1" type="CSGCylinder3D" parent="SetPieces" unique_id=560555332]
+transform = Transform3D(0.9396926, -0.341187, -0.02385813, 0, 0.06975651, -0.9975641, 0.34202012, 0.9374036, 0.06554968, -8.5, 3.5, -124)
+radius = 0.65
+height = 14.0
+material = SubResource("StandardMaterial3D_2pbhx")
+
+[node name="Root_2" type="CSGCylinder3D" parent="SetPieces" unique_id=2022197006]
+transform = Transform3D(1, 0, 0, 0, -0.034899462, -0.99939084, 0, 0.99939084, -0.034899462, -6, 2, -122)
+radius = 0.8
+height = 14.0
+material = SubResource("StandardMaterial3D_2pbhx")
+
+[node name="Root_3" type="CSGCylinder3D" parent="SetPieces" unique_id=1799826929]
+transform = Transform3D(0.9396926, 0.3386916, -0.047599994, 0, -0.13917308, -0.99026805, -0.34202012, 0.9305476, -0.1307799, -3.5, 3.5, -120)
+height = 14.0
+material = SubResource("StandardMaterial3D_2pbhx")
+
+[node name="Root_4" type="CSGCylinder3D" parent="SetPieces" unique_id=206625594]
+transform = Transform3D(0.76604444, 0.62369406, -0.15550438, 0, -0.24192187, -0.9702957, -0.6427876, 0.74328965, -0.18532291, -1, 2, -118)
+radius = 0.65
+height = 14.0
+material = SubResource("StandardMaterial3D_2pbhx")
+
+[node name="RopeBridge" type="Node3D" parent="SetPieces" unique_id=361735530]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0, -172)
+script = ExtResource("4_1l04d")
+snap_sound = ExtResource("5_xlkky")
+collapse_sound = ExtResource("6_175eb")
+
+[node name="River" type="MeshInstance3D" parent="SetPieces" unique_id=1294644729]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, -0.3, -271)
+mesh = SubResource("PlaneMesh_smfdu")
+
+[node name="Cliff" type="CSGBox3D" parent="SetPieces" unique_id=442647312]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7, -286)
+collision_mask = 0
+size = Vector3(60, 14, 4)
+material = SubResource("StandardMaterial3D_hqch0")
+
+[node name="Waterfall" type="MeshInstance3D" parent="SetPieces" unique_id=485095825]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 7, -283.95)
+mesh = SubResource("QuadMesh_2fmsx")
+
+[node name="WaterfallSound" type="AudioStreamPlayer3D" parent="SetPieces" unique_id=261376321]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 1, -283)
+stream = ExtResource("9_wv54a")
+unit_size = 12.0
+autoplay = true
+
+[node name="Mist" type="GPUParticles3D" parent="SetPieces" unique_id=1348937269]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0.2, -282.5)
+cast_shadow = 0
+amount = 40
+lifetime = 3.0
+preprocess = 3.0
+visibility_aabb = AABB(-7, -3.5, -4, 14, 7, 8)
+process_material = SubResource("ParticleProcessMaterial_fjaiy")
+draw_pass_1 = SubResource("QuadMesh_blf1f")
+
+[node name="Gameplay" type="Node3D" parent="." unique_id=373425107]
+
+[node name="Player" type="CharacterBody3D" parent="Gameplay" unique_id=737993554]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 8)
+script = ExtResource("10_vietd")
+flashlight_click_sound = ExtResource("11_r8lbt")
+death_sound = ExtResource("12_rthv4")
+
+[node name="Pursuer" type="CharacterBody3D" parent="Gameplay" unique_id=680514444]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30, 0, 30)
+script = ExtResource("13_05hb8")
+roar_sound = ExtResource("14_5hoio")
+footstep_sound = ExtResource("15_w3m7c")
+bash_sound = ExtResource("16_5gq52")
+screech_sound = ExtResource("17_jpp7x")
+vanish_sound = ExtResource("18_gtqes")
+
+[node name="MusicDirector" type="Node" parent="Gameplay" unique_id=1818145367]
+script = ExtResource("19_5dgmb")
+layers = Array[ExtResource("20_v8lep")]([SubResource("Resource_d6mlu"), SubResource("Resource_kvswn"), SubResource("Resource_xei1k"), SubResource("Resource_js44s")])
+ambience = ExtResource("25_jg82f")
+heartbeat = ExtResource("26_judak")
+
+[node name="StalkZone" type="Area3D" parent="Gameplay" unique_id=1612767932]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 5)
+script = ExtResource("27_6c72a")
+hint = "The jungle. Keep moving.
+Don't stare into the trees."
+extent = Vector3(7, 1.5, 3)
+
+[node name="Stalk_00" type="Marker3D" parent="Gameplay/StalkZone" unique_id=991070562]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -6.074606, -1.5, -5.1135836)
+
+[node name="Stalk_01" type="Marker3D" parent="Gameplay/StalkZone" unique_id=665042238]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 5.383675, -1.5, -6.94752)
+
+[node name="Stalk_02" type="Marker3D" parent="Gameplay/StalkZone" unique_id=960805847]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -5.122517, -1.5, -12.164848)
+
+[node name="Stalk_03" type="Marker3D" parent="Gameplay/StalkZone" unique_id=1503885289]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 6.081282, -1.5, -16.280376)
+
+[node name="Stalk_04" type="Marker3D" parent="Gameplay/StalkZone" unique_id=322143901]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -6.016999, -1.5, -19.218239)
+
+[node name="Stalk_05" type="Marker3D" parent="Gameplay/StalkZone" unique_id=1684573634]
+transform = Transform3D(-0.9438583, 0, 0.33035046, 0, 1, 0, -0.33035046, 0, -0.9438583, 5.6339726, -1.5, -19.746689)
+
+[node name="Stalk_06" type="Marker3D" parent="Gameplay/StalkZone" unique_id=524835563]
+transform = Transform3D(-0.9438583, 0, 0.33035046, 0, 1, 0, -0.33035046, 0, -0.9438583, -3.5302231, -1.5, -28.467888)
+
+[node name="Stalk_07" type="Marker3D" parent="Gameplay/StalkZone" unique_id=1214045814]
+transform = Transform3D(-0.9438583, 0, 0.33035046, 0, 1, 0, -0.33035046, 0, -0.9438583, 8.270763, -1.5, -25.492989)
+
+[node name="Stalk_08" type="Marker3D" parent="Gameplay/StalkZone" unique_id=1255209860]
+transform = Transform3D(-0.9438583, 0, 0.33035046, 0, 1, 0, -0.33035046, 0, -0.9438583, -1.6702408, -1.5, -32.43457)
+
+[node name="Stalk_09" type="Marker3D" parent="Gameplay/StalkZone" unique_id=1082565041]
+transform = Transform3D(-0.9438583, 0, 0.33035046, 0, 1, 0, -0.33035046, 0, -0.9438583, 10.758888, -1.5, -35.080017)
+
+[node name="Stalk_10" type="Marker3D" parent="Gameplay/StalkZone" unique_id=1494635657]
+transform = Transform3D(-0.9438583, 0, 0.33035046, 0, 1, 0, -0.33035046, 0, -0.9438583, 0.20197329, -1.5, -39.32017)
+
+[node name="Stalk_11" type="Marker3D" parent="Gameplay/StalkZone" unique_id=129952902]
+transform = Transform3D(-0.9805807, 0, -0.19611606, 0, 1, 0, 0.19611606, 0, -0.9805807, 12.140698, -1.5, -44.542244)
+
+[node name="Stalk_12" type="Marker3D" parent="Gameplay/StalkZone" unique_id=1664221705]
+transform = Transform3D(-0.9805807, 0, -0.19611606, 0, 1, 0, 0.19611606, 0, -0.9805807, 0.5387758, -1.5, -44.71808)
+
+[node name="Stalk_13" type="Marker3D" parent="Gameplay/StalkZone" unique_id=2000304423]
+transform = Transform3D(-0.9805807, 0, -0.19611606, 0, 1, 0, 0.19611606, 0, -0.9805807, 10.4575205, -1.5, -48.598797)
+
+[node name="Stalk_14" type="Marker3D" parent="Gameplay/StalkZone" unique_id=1584610340]
+transform = Transform3D(-0.9805807, 0, -0.19611606, 0, 1, 0, 0.19611606, 0, -0.9805807, -0.16660091, -1.5, -49.21563)
+
+[node name="Stalk_15" type="Marker3D" parent="Gameplay/StalkZone" unique_id=644712862]
+transform = Transform3D(-0.9805807, 0, -0.19611606, 0, 1, 0, 0.19611606, 0, -0.9805807, 10.133706, -1.5, -54.85702)
+
+[node name="Stalk_16" type="Marker3D" parent="Gameplay/StalkZone" unique_id=476813988]
+transform = Transform3D(-0.9805807, 0, -0.19611606, 0, 1, 0, 0.19611606, 0, -0.9805807, -2.115871, -1.5, -56.63407)
+
+[node name="Stalk_17" type="Marker3D" parent="Gameplay/StalkZone" unique_id=1259125899]
+transform = Transform3D(-0.93834317, 0, -0.34570527, 0, 1, 0, 0.34570527, 0, -0.93834317, 7.8182673, -1.5, -62.46063)
+
+[node name="Chase_Start" type="Area3D" parent="Gameplay" unique_id=1911237091 node_paths=PackedStringArray("pursuer_start", "player_respawn")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 1.75, -72)
+script = ExtResource("28_bvol4")
+pursuer_start = NodePath("PursuerStart")
+player_respawn = NodePath("PlayerRespawn")
+hint = "RUN."
+stinger = ExtResource("29_v6a36")
+extent = Vector3(8, 1.75, 0.8)
+
+[node name="PursuerStart" type="Marker3D" parent="Gameplay/Chase_Start" unique_id=1084629061]
+transform = Transform3D(0.70710677, 0, 0.70710677, 0, 1, 0, -0.70710677, 0, 0.70710677, 7, -1.75, 13)
+
+[node name="PlayerRespawn" type="Marker3D" parent="Gameplay/Chase_Start" unique_id=1465680827]
+transform = Transform3D(0.9805807, 0, 0.19611613, 0, 1, 0, -0.19611613, 0, 0.9805807, -1, -1.75, -4)
+
+[node name="Hint_Log" type="Area3D" parent="Gameplay" unique_id=560363444]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.5, 1.75, -94)
+script = ExtResource("28_bvol4")
+starts_chase = false
+hint = "[SPACE] jump"
+extent = Vector3(8, 1.75, 0.8)
+
+[node name="RootCrawl" type="Area3D" parent="Gameplay" unique_id=875981566 node_paths=PackedStringArray("ambush_point")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 1, -122)
+script = ExtResource("30_papy4")
+ambush_point = NodePath("AmbushPoint")
+ambush_delay = 1.0
+extent = Vector3(8, 1, 7.5)
+
+[node name="AmbushPoint" type="Marker3D" parent="Gameplay/RootCrawl" unique_id=2141161159]
+transform = Transform3D(0.28734785, 0, 0.9578263, 0, 1, 0, -0.9578263, 0, 0.28734785, 7.2, -1, -16)
+
+[node name="Checkpoint_AfterRoots" type="Area3D" parent="Gameplay" unique_id=243947651 node_paths=PackedStringArray("pursuer_start", "player_respawn")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 1.75, -142)
+script = ExtResource("28_bvol4")
+pursuer_start = NodePath("PursuerStart")
+player_respawn = NodePath("PlayerRespawn")
+extent = Vector3(8, 1.75, 0.8)
+
+[node name="PursuerStart" type="Marker3D" parent="Gameplay/Checkpoint_AfterRoots" unique_id=42655784]
+transform = Transform3D(0.44721356, 0, 0.89442724, 0, 1, 0, -0.89442724, 0, 0.44721356, 4.2, -1.75, 5)
+
+[node name="PlayerRespawn" type="Marker3D" parent="Gameplay/Checkpoint_AfterRoots" unique_id=1068791091]
+transform = Transform3D(0.95782626, 0, -0.2873479, 0, 1, 0, 0.2873479, 0, 0.95782626, 0, -1.75, -3)
+
+[node name="Hint_Bridge" type="Area3D" parent="Gameplay" unique_id=1820461619]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 1.75, -199)
+script = ExtResource("28_bvol4")
+starts_chase = false
+hint = "Cut the ropes! Hold [E] at the posts."
+extent = Vector3(6, 1.75, 1.5)
+
+[node name="Ambush_Climb" type="Area3D" parent="Gameplay" unique_id=1483667534 node_paths=PackedStringArray("pursuer_start", "player_respawn")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 1.75, -214)
+script = ExtResource("28_bvol4")
+pursuer_start = NodePath("PursuerStart")
+player_respawn = NodePath("PlayerRespawn")
+activation_delay = 0.6
+ambush = true
+extent = Vector3(8, 1.75, 0.8)
+
+[node name="PursuerStart" type="Marker3D" parent="Gameplay/Ambush_Climb" unique_id=953023978]
+transform = Transform3D(0.9805807, 0, -0.19611613, 0, 1, 0, 0.19611613, 0, 0.9805807, -5, -1.75, 16)
+
+[node name="PlayerRespawn" type="Marker3D" parent="Gameplay/Ambush_Climb" unique_id=1152485524]
+transform = Transform3D(0.95782626, 0, 0.2873479, 0, 1, 0, -0.2873479, 0, 0.95782626, 0, -1.75, -2)
+
+[node name="ChasmKillZone" type="Area3D" parent="Gameplay" unique_id=1334204058]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.5, -9, -184)
+script = ExtResource("31_at0t2")
+extent = Vector3(55, 3, 12)
+
+[node name="SafeZone_River" type="Area3D" parent="Gameplay" unique_id=496725506]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, -265)
+script = ExtResource("32_8p0p5")
+message = "It won't cross the water.
+For now."
+extent = Vector3(14, 2, 5)
+
+[node name="Battery_Ferns" type="Area3D" parent="Gameplay" unique_id=1581283292]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.5, 0.4, -42)
+script = ExtResource("33_em0o5")
+pickup_sound = ExtResource("34_746s5")
+
+[node name="Battery_Log" type="Area3D" parent="Gameplay" unique_id=451163914]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11, 0.4, -98)
+script = ExtResource("33_em0o5")
+pickup_sound = ExtResource("34_746s5")
+
+[node name="Battery_Ravine" type="Area3D" parent="Gameplay" unique_id=2138768829]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0.4, -162)
+script = ExtResource("33_em0o5")
+pickup_sound = ExtResource("34_746s5")
+
+[node name="Atmosphere" type="Node3D" parent="." unique_id=1204675837]
+
+[node name="Fireflies_0" type="GPUParticles3D" parent="Atmosphere" unique_id=764918093]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, -3.299965)
+cast_shadow = 0
+amount = 22
+lifetime = 6.0
+preprocess = 6.0
+visibility_aabb = AABB(-12, -5.5, -12, 24, 11, 24)
+process_material = SubResource("ParticleProcessMaterial_ukisw")
+draw_pass_1 = SubResource("QuadMesh_u6q2t")
+
+[node name="Fireflies_1" type="GPUParticles3D" parent="Atmosphere" unique_id=388800409]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.4004955, 1.8, -33.28713)
+cast_shadow = 0
+amount = 22
+lifetime = 6.0
+preprocess = 6.0
+visibility_aabb = AABB(-12, -5.5, -12, 24, 11, 24)
+process_material = SubResource("ParticleProcessMaterial_r1gxu")
+draw_pass_1 = SubResource("QuadMesh_uvaf4")
+
+[node name="Fireflies_2" type="GPUParticles3D" parent="Atmosphere" unique_id=1773631795]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.064356565, 1.8, -63.31754)
+cast_shadow = 0
+amount = 22
+lifetime = 6.0
+preprocess = 6.0
+visibility_aabb = AABB(-12, -5.5, -12, 24, 11, 24)
+process_material = SubResource("ParticleProcessMaterial_pycfr")
+draw_pass_1 = SubResource("QuadMesh_xsbya")
+
+[node name="Fireflies_3" type="GPUParticles3D" parent="Atmosphere" unique_id=1781271553]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.8447795, 1.8, -93.24176)
+cast_shadow = 0
+amount = 22
+lifetime = 6.0
+preprocess = 6.0
+visibility_aabb = AABB(-12, -5.5, -12, 24, 11, 24)
+process_material = SubResource("ParticleProcessMaterial_8tspv")
+draw_pass_1 = SubResource("QuadMesh_8pp4u")
+
+[node name="Fireflies_4" type="GPUParticles3D" parent="Atmosphere" unique_id=869603155]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 1.8, -124.20181)
+cast_shadow = 0
+amount = 22
+lifetime = 6.0
+preprocess = 6.0
+visibility_aabb = AABB(-12, -5.5, -12, 24, 11, 24)
+process_material = SubResource("ParticleProcessMaterial_r7soc")
+draw_pass_1 = SubResource("QuadMesh_oj0oi")
+
+[node name="Fireflies_5" type="GPUParticles3D" parent="Atmosphere" unique_id=1010803867]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3206966, 1.8, -154.3513)
+cast_shadow = 0
+amount = 22
+lifetime = 6.0
+preprocess = 6.0
+visibility_aabb = AABB(-12, -5.5, -12, 24, 11, 24)
+process_material = SubResource("ParticleProcessMaterial_skqc3")
+draw_pass_1 = SubResource("QuadMesh_75ykq")
+
+[node name="Fireflies_6" type="GPUParticles3D" parent="Atmosphere" unique_id=1501900058]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 1.8, -184.00638)
+cast_shadow = 0
+amount = 22
+lifetime = 6.0
+preprocess = 6.0
+visibility_aabb = AABB(-12, -5.5, -12, 24, 11, 24)
+process_material = SubResource("ParticleProcessMaterial_2jc2v")
+draw_pass_1 = SubResource("QuadMesh_oyyc2")
+
+[node name="Fireflies_7" type="GPUParticles3D" parent="Atmosphere" unique_id=1052625593]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.0286403, 1.8, -214.79266)
+cast_shadow = 0
+amount = 22
+lifetime = 6.0
+preprocess = 6.0
+visibility_aabb = AABB(-12, -5.5, -12, 24, 11, 24)
+process_material = SubResource("ParticleProcessMaterial_imcea")
+draw_pass_1 = SubResource("QuadMesh_7yg8e")
+
+[node name="Fireflies_8" type="GPUParticles3D" parent="Atmosphere" unique_id=1024880775]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.5950918, 1.8, -243.98773)
+cast_shadow = 0
+amount = 22
+lifetime = 6.0
+preprocess = 6.0
+visibility_aabb = AABB(-12, -5.5, -12, 24, 11, 24)
+process_material = SubResource("ParticleProcessMaterial_gcdex")
+draw_pass_1 = SubResource("QuadMesh_3pwvt")
+
+[node name="Mushrooms_00" type="Node3D" parent="Atmosphere" unique_id=281250047]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.749542, 0, 2.3500175)
+
+[node name="@MeshInstance3D@49" type="MeshInstance3D" parent="Atmosphere/Mushrooms_00" unique_id=227871537]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.19745186, 0.039169513, -0.15592296)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_170tu")
+
+[node name="@MeshInstance3D@50" type="MeshInstance3D" parent="Atmosphere/Mushrooms_00" unique_id=1643013318]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.08684796, 0.06271191, -0.0122974515)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_gcids")
+
+[node name="@MeshInstance3D@51" type="MeshInstance3D" parent="Atmosphere/Mushrooms_00" unique_id=277940448]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.12705514, 0.047573186, 0.04466328)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_3jivu")
+
+[node name="@MeshInstance3D@52" type="MeshInstance3D" parent="Atmosphere/Mushrooms_00" unique_id=2110914144]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.31318215, 0.07166472, -0.004381627)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_t3aku")
+
+[node name="@MeshInstance3D@53" type="MeshInstance3D" parent="Atmosphere/Mushrooms_00" unique_id=1502752516]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.28535026, 0.04786158, 0.116016656)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_rrna5")
+
+[node name="@MeshInstance3D@54" type="MeshInstance3D" parent="Atmosphere/Mushrooms_00" unique_id=1937342454]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.12754732, 0.05927031, 0.20393851)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_ersme")
+
+[node name="@OmniLight3D@55" type="OmniLight3D" parent="Atmosphere/Mushrooms_00" unique_id=1107678299]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+light_color = Color(0.3, 1, 0.9, 1)
+light_energy = 0.35
+omni_range = 3.5
+
+[node name="Mushrooms_01" type="Node3D" parent="Atmosphere" unique_id=870689170]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.3009806, 0, -16.413813)
+
+[node name="@MeshInstance3D@56" type="MeshInstance3D" parent="Atmosphere/Mushrooms_01" unique_id=1593393603]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0509955, 0.037323244, 0.13289174)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_mpf4c")
+
+[node name="@MeshInstance3D@57" type="MeshInstance3D" parent="Atmosphere/Mushrooms_01" unique_id=2066868070]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.12667081, 0.04572299, 0.070614904)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_mntvp")
+
+[node name="@MeshInstance3D@58" type="MeshInstance3D" parent="Atmosphere/Mushrooms_01" unique_id=844711270]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.050974607, 0.056797046, 0.2184448)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_ae8r1")
+
+[node name="@MeshInstance3D@59" type="MeshInstance3D" parent="Atmosphere/Mushrooms_01" unique_id=2078225488]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.15605254, 0.041383065, -0.23810272)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_h5op1")
+
+[node name="@MeshInstance3D@60" type="MeshInstance3D" parent="Atmosphere/Mushrooms_01" unique_id=266697296]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3453081, 0.032990687, 0.23080227)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_4sx2e")
+
+[node name="Mushrooms_02" type="Node3D" parent="Atmosphere" unique_id=83560243]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.391785, 0, -35.508602)
+
+[node name="@MeshInstance3D@61" type="MeshInstance3D" parent="Atmosphere/Mushrooms_02" unique_id=1771239697]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0018588006, 0.051168166, 0.25712273)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_vp7fx")
+
+[node name="@MeshInstance3D@62" type="MeshInstance3D" parent="Atmosphere/Mushrooms_02" unique_id=399869987]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.19150841, 0.040726475, -0.23577265)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_f2okf")
+
+[node name="@MeshInstance3D@63" type="MeshInstance3D" parent="Atmosphere/Mushrooms_02" unique_id=94789917]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.39440018, 0.066035844, -0.0067712963)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_qnknx")
+
+[node name="@MeshInstance3D@64" type="MeshInstance3D" parent="Atmosphere/Mushrooms_02" unique_id=1065982236]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.027644396, 0.0647239, 0.22705504)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_yd74g")
+
+[node name="@OmniLight3D@65" type="OmniLight3D" parent="Atmosphere/Mushrooms_02" unique_id=177137226]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+light_color = Color(0.3, 1, 0.9, 1)
+light_energy = 0.35
+omni_range = 3.5
+
+[node name="Mushrooms_03" type="Node3D" parent="Atmosphere" unique_id=731892933]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.7815804, 0, -56.439453)
+
+[node name="@MeshInstance3D@66" type="MeshInstance3D" parent="Atmosphere/Mushrooms_03" unique_id=82379867]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.34423164, 0.0329995, 0.31172672)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_0ok3a")
+
+[node name="@MeshInstance3D@67" type="MeshInstance3D" parent="Atmosphere/Mushrooms_03" unique_id=1120328954]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3064058, 0.059409704, 0.029038012)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_m00fg")
+
+[node name="@MeshInstance3D@68" type="MeshInstance3D" parent="Atmosphere/Mushrooms_03" unique_id=802386724]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.13337266, 0.044549596, -0.25831503)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_uivus")
+
+[node name="@MeshInstance3D@69" type="MeshInstance3D" parent="Atmosphere/Mushrooms_03" unique_id=219441192]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2288721, 0.07195593, -0.090242594)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_mp8ix")
+
+[node name="@MeshInstance3D@70" type="MeshInstance3D" parent="Atmosphere/Mushrooms_03" unique_id=292825596]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.32376948, 0.041176386, 0.38681546)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_p01ji")
+
+[node name="Mushrooms_04" type="Node3D" parent="Atmosphere" unique_id=925714142]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.3434076, 0, -73.04667)
+
+[node name="@MeshInstance3D@71" type="MeshInstance3D" parent="Atmosphere/Mushrooms_04" unique_id=173523171]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.35409465, 0.07191542, -0.15800813)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_qi4tw")
+
+[node name="@MeshInstance3D@72" type="MeshInstance3D" parent="Atmosphere/Mushrooms_04" unique_id=522808785]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.015418768, 0.04730133, 0.09598774)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_gkxcr")
+
+[node name="@MeshInstance3D@73" type="MeshInstance3D" parent="Atmosphere/Mushrooms_04" unique_id=1425633977]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.07015672, 0.03087907, 0.20750365)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_0gtgt")
+
+[node name="@OmniLight3D@74" type="OmniLight3D" parent="Atmosphere/Mushrooms_04" unique_id=84776889]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+light_color = Color(0.3, 1, 0.9, 1)
+light_energy = 0.35
+omni_range = 3.5
+
+[node name="Mushrooms_05" type="Node3D" parent="Atmosphere" unique_id=172016737]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.767003, 0, -92.85704)
+
+[node name="@MeshInstance3D@75" type="MeshInstance3D" parent="Atmosphere/Mushrooms_05" unique_id=560244618]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.27113974, 0.06922734, -0.19481158)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_0wftc")
+
+[node name="@MeshInstance3D@76" type="MeshInstance3D" parent="Atmosphere/Mushrooms_05" unique_id=56099283]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3071091, 0.06350589, -0.11594471)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_im0xr")
+
+[node name="@MeshInstance3D@77" type="MeshInstance3D" parent="Atmosphere/Mushrooms_05" unique_id=152284206]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.039263666, 0.034799576, 0.08376297)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_4c60w")
+
+[node name="@MeshInstance3D@78" type="MeshInstance3D" parent="Atmosphere/Mushrooms_05" unique_id=1876545832]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.10983917, 0.053568766, 0.057777345)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_hny3u")
+
+[node name="@MeshInstance3D@79" type="MeshInstance3D" parent="Atmosphere/Mushrooms_05" unique_id=1658213003]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.04690972, 0.060089547, 0.14745)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_tkxcg")
+
+[node name="@MeshInstance3D@80" type="MeshInstance3D" parent="Atmosphere/Mushrooms_05" unique_id=810657132]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3512873, 0.034073044, 0.15975907)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_gho4s")
+
+[node name="Mushrooms_06" type="Node3D" parent="Atmosphere" unique_id=992746200]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.39174, 0, -112.90185)
+
+[node name="@MeshInstance3D@81" type="MeshInstance3D" parent="Atmosphere/Mushrooms_06" unique_id=360113932]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.24515186, 0.06981456, 0.30942973)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_bsq80")
+
+[node name="@MeshInstance3D@82" type="MeshInstance3D" parent="Atmosphere/Mushrooms_06" unique_id=344536104]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.014494032, 0.058841087, -0.26229155)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_58syq")
+
+[node name="@MeshInstance3D@83" type="MeshInstance3D" parent="Atmosphere/Mushrooms_06" unique_id=256699065]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1454033, 0.05699314, 0.3017377)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_u6bpo")
+
+[node name="@MeshInstance3D@84" type="MeshInstance3D" parent="Atmosphere/Mushrooms_06" unique_id=1282268253]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.29600883, 0.03565724, -0.17643647)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_u63nw")
+
+[node name="@MeshInstance3D@85" type="MeshInstance3D" parent="Atmosphere/Mushrooms_06" unique_id=73072324]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.15671763, 0.039761897, -0.31020895)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_4tail")
+
+[node name="@MeshInstance3D@86" type="MeshInstance3D" parent="Atmosphere/Mushrooms_06" unique_id=1180357257]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.03376931, 0.059591763, 0.09330663)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_krlf4")
+
+[node name="@OmniLight3D@87" type="OmniLight3D" parent="Atmosphere/Mushrooms_06" unique_id=1806703210]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+light_color = Color(0.3, 1, 0.9, 1)
+light_energy = 0.35
+omni_range = 3.5
+
+[node name="Mushrooms_07" type="Node3D" parent="Atmosphere" unique_id=1628595364]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.541156, 0, -132.16046)
+
+[node name="@MeshInstance3D@88" type="MeshInstance3D" parent="Atmosphere/Mushrooms_07" unique_id=572854707]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.04596263, 0.03342481, 0.004362434)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_l0e03")
+
+[node name="@MeshInstance3D@89" type="MeshInstance3D" parent="Atmosphere/Mushrooms_07" unique_id=582657190]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2498299, 0.06724979, -0.37301806)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_60t0x")
+
+[node name="@MeshInstance3D@90" type="MeshInstance3D" parent="Atmosphere/Mushrooms_07" unique_id=1281878131]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.33079565, 0.06193378, 0.17786434)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_nqobg")
+
+[node name="@MeshInstance3D@91" type="MeshInstance3D" parent="Atmosphere/Mushrooms_07" unique_id=2037781330]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.002357483, 0.037895184, 0.13515827)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_erij1")
+
+[node name="@MeshInstance3D@92" type="MeshInstance3D" parent="Atmosphere/Mushrooms_07" unique_id=630255654]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.12396029, 0.053881273, -0.24446245)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_lc8ux")
+
+[node name="Mushrooms_08" type="Node3D" parent="Atmosphere" unique_id=1245167642]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.4743128, 0, -153.17366)
+
+[node name="@MeshInstance3D@93" type="MeshInstance3D" parent="Atmosphere/Mushrooms_08" unique_id=1871878126]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.23000835, 0.04250489, 0.27010193)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_i1k6j")
+
+[node name="@MeshInstance3D@94" type="MeshInstance3D" parent="Atmosphere/Mushrooms_08" unique_id=1741801121]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.31360212, 0.038296763, -0.19278407)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_bmwvu")
+
+[node name="@MeshInstance3D@95" type="MeshInstance3D" parent="Atmosphere/Mushrooms_08" unique_id=887893599]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2088376, 0.07045086, 0.28585395)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_nqo32")
+
+[node name="@MeshInstance3D@96" type="MeshInstance3D" parent="Atmosphere/Mushrooms_08" unique_id=839500385]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.20353198, 0.07016605, 0.23397502)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_5lf7a")
+
+[node name="@MeshInstance3D@97" type="MeshInstance3D" parent="Atmosphere/Mushrooms_08" unique_id=415249940]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.028846383, 0.058157463, -0.20311642)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_3vbab")
+
+[node name="@OmniLight3D@98" type="OmniLight3D" parent="Atmosphere/Mushrooms_08" unique_id=2125617204]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+light_color = Color(0.3, 1, 0.9, 1)
+light_energy = 0.35
+omni_range = 3.5
+
+[node name="Mushrooms_11" type="Node3D" parent="Atmosphere" unique_id=1840449691]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.582558, 0, -208.96301)
+
+[node name="@MeshInstance3D@99" type="MeshInstance3D" parent="Atmosphere/Mushrooms_11" unique_id=578496638]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.37503904, 0.06536011, 0.17134693)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_an3xf")
+
+[node name="@MeshInstance3D@100" type="MeshInstance3D" parent="Atmosphere/Mushrooms_11" unique_id=2073451572]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.35463825, 0.057453386, 0.21906981)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_tsj3q")
+
+[node name="@MeshInstance3D@101" type="MeshInstance3D" parent="Atmosphere/Mushrooms_11" unique_id=367427153]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.15436402, 0.06394321, -0.3369731)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_kfhb7")
+
+[node name="Mushrooms_12" type="Node3D" parent="Atmosphere" unique_id=441975339]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.26723242, 0, -227.20998)
+
+[node name="@MeshInstance3D@102" type="MeshInstance3D" parent="Atmosphere/Mushrooms_12" unique_id=914156005]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0012412369, 0.031054132, 0.2794774)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_2b6ni")
+
+[node name="@MeshInstance3D@103" type="MeshInstance3D" parent="Atmosphere/Mushrooms_12" unique_id=1667855169]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.16147855, 0.031958926, 0.2551783)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_g2i0i")
+
+[node name="@MeshInstance3D@104" type="MeshInstance3D" parent="Atmosphere/Mushrooms_12" unique_id=830413834]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.14223644, 0.03327783, 0.36578843)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_l8ypy")
+
+[node name="@MeshInstance3D@105" type="MeshInstance3D" parent="Atmosphere/Mushrooms_12" unique_id=237538487]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.30537045, 0.05921585, -0.28315914)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_b2opj")
+
+[node name="@MeshInstance3D@106" type="MeshInstance3D" parent="Atmosphere/Mushrooms_12" unique_id=1155401774]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.16552517, 0.06882473, -0.36160827)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_ixy5c")
+
+[node name="@OmniLight3D@107" type="OmniLight3D" parent="Atmosphere/Mushrooms_12" unique_id=634216082]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+light_color = Color(0.3, 1, 0.9, 1)
+light_energy = 0.35
+omni_range = 3.5
+
+[node name="Mushrooms_13" type="Node3D" parent="Atmosphere" unique_id=232177444]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.1360874, 0, -247.61394)
+
+[node name="@MeshInstance3D@108" type="MeshInstance3D" parent="Atmosphere/Mushrooms_13" unique_id=681997142]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.19473282, 0.059714597, -0.07592556)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_ybe32")
+
+[node name="@MeshInstance3D@109" type="MeshInstance3D" parent="Atmosphere/Mushrooms_13" unique_id=716622394]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3764113, 0.043415684, -0.37058425)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_rrx5h")
+
+[node name="@MeshInstance3D@110" type="MeshInstance3D" parent="Atmosphere/Mushrooms_13" unique_id=1386476507]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.09144431, 0.069590405, -0.34482625)
+material_override = SubResource("StandardMaterial3D_wj4he")
+mesh = SubResource("SphereMesh_6g7tv")

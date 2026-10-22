@@ -5,6 +5,6 @@ extends Node
 
 
 func _ready() -> void:
-	var err: Error = preload("res://tools/build_building_level.gd").save_level()
+	var err: Error = preload("res://tools/build_building_level.gd").save_levels()
 	print("Relentless: build ", "OK" if err == OK else "failed (%d)" % err)
 	get_tree().quit(0 if err == OK else 1)

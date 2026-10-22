@@ -21,6 +21,7 @@ Press **Esc** to free the mouse, and click the game window to capture it again.
 | Key | Action |
 | --- | --- |
 | WASD / mouse | Move / look |
+| Arrow keys | Look (handy on a touchpad) |
 | Shift | Run |
 | Ctrl or C | Crouch (automatic in vents) |
 | Space | Jump |

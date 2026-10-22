@@ -45,6 +45,9 @@ extends CharacterBody3D
 @export var standing_eye_height := 1.65
 @export var crouched_eye_height := 0.75
 @export var mouse_sensitivity := 0.12
+## Degrees per second when looking with the arrow keys (for touchpads that
+## switch off while a key is held).
+@export var key_look_speed := 120.0
 
 @export_group("Interaction")
 @export var interact_range := 2.3
@@ -150,29 +153,58 @@ func _ready() -> void:
 	_yaw = rotation.y
 	_view = Vector3(0.0, _yaw, 0.0)
 	Chase.register_player(self)
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	_grab_mouse()
 
 
 # ---------------------------------------------------------------------------
 # Input
 # ---------------------------------------------------------------------------
 
+## On X11, Godot's captured mouse drops most touchpad motion, so there we hide
+## the cursor, keep it in the window, and pull it back to the centre after
+## every move instead.
+var _warp_look := DisplayServer.get_name() == "X11"
+
+
+func _grab_mouse() -> void:
+	Input.mouse_mode = Input.MOUSE_MODE_CONFINED_HIDDEN if _warp_look else Input.MOUSE_MODE_CAPTURED
+	if _warp_look:
+		get_viewport().warp_mouse(_screen_center())
+
+
+func _mouse_grabbed() -> bool:
+	return Input.mouse_mode in [Input.MOUSE_MODE_CAPTURED, Input.MOUSE_MODE_CONFINED_HIDDEN]
+
+
+func _screen_center() -> Vector2:
+	return get_viewport().get_visible_rect().size * 0.5
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("release_mouse"):
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 		return
-	if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+	if not _mouse_grabbed():
 		if event is InputEventMouseButton and event.pressed:
-			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+			_grab_mouse()
 		return
 	if dead:
 		return
 
 	if event is InputEventMouseMotion:
+		var moved: Vector2 = event.relative
+		if _warp_look:
+			# Measure from the centre, then put the cursor back there. The warp
+			# itself arrives as a motion event that lands on the centre: ignore it.
+			var center := _screen_center()
+			moved = event.position - center
+			if moved.length_squared() < 0.25:
+				return
+			get_viewport().warp_mouse(center)
 		# Steering is clumsy while you're staring behind you.
 		var sens := lerpf(1.0, 0.35, _look_back_alpha) * deg_to_rad(mouse_sensitivity)
-		_yaw -= event.relative.x * sens
-		_pitch = clampf(_pitch - event.relative.y * sens, deg_to_rad(-89.0), deg_to_rad(89.0))
+		_yaw -= moved.x * sens
+		_pitch = clampf(_pitch - moved.y * sens, deg_to_rad(-89.0), deg_to_rad(89.0))
 	elif event.is_action_pressed("crouch"):
 		_crouch_held = true
 	elif event.is_action_released("crouch"):
@@ -216,6 +248,11 @@ func _physics_process(delta: float) -> void:
 		_look_back_held = Input.is_action_pressed("look_back")
 		_focus_held = Input.is_action_pressed("focus_beam")
 		_move_input = Input.get_vector("move_left", "move_right", "move_back", "move_forward")
+		var key_look := Input.get_vector("look_left", "look_right", "look_down", "look_up")
+		if key_look != Vector2.ZERO:
+			var turn := lerpf(1.0, 0.35, _look_back_alpha) * deg_to_rad(key_look_speed) * delta
+			_yaw -= key_look.x * turn
+			_pitch = clampf(_pitch + key_look.y * turn, deg_to_rad(-89.0), deg_to_rad(89.0))
 		_update_crouch()
 		_update_movement(delta)
 		_update_interact_target()

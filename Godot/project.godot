@@ -70,6 +70,22 @@ interact={
 "deadzone": 0.2,
 "events": [Object(InputEventKey,"physical_keycode":69), Object(InputEventMouseButton,"button_index":1)]
 }
+look_left={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":4194319)]
+}
+look_up={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":4194320)]
+}
+look_right={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":4194321)]
+}
+look_down={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":4194322)]
+}
 release_mouse={
 "deadzone": 0.2,
 "events": [Object(InputEventKey,"physical_keycode":4194305)]

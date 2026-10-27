@@ -205,9 +205,6 @@ func _screen_center() -> Vector2:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("release_mouse"):
-		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-		return
 	if not _mouse_grabbed():
 		if event is InputEventMouseButton and event.pressed:
 			_grab_mouse()
@@ -228,7 +225,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				return
 			get_viewport().warp_mouse(center)
 		# Steering is clumsy while you're staring behind you.
-		var sens := lerpf(1.0, 0.35, _look_back_alpha) * deg_to_rad(mouse_sensitivity)
+		var sens := lerpf(1.0, 0.35, _look_back_alpha) * deg_to_rad(mouse_sensitivity * Settings.look_scale)
 		_yaw -= moved.x * sens
 		_pitch = clampf(_pitch - moved.y * sens, deg_to_rad(-89.0), deg_to_rad(89.0))
 	elif event.is_action_pressed("crouch"):

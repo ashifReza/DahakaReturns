@@ -348,8 +348,8 @@ func _on_chase_ended() -> void:
 		await ui.card(text)
 	if fast_mode:
 		return  # A playtest: it reads the ending itself.
-	await ui.card("Press any key to play again.", 600.0)
-	get_tree().reload_current_scene()
+	await ui.card("Press any key to return to the menu.", 600.0)
+	get_tree().change_scene_to_file(MenuUI.MAIN_MENU)
 
 
 # ---------------------------------------------------------------------------

@@ -120,8 +120,14 @@ func _ready() -> void:
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("skip_dialog") or (_note_panel.visible and event.is_action_pressed("interact")):
 		_skip = true
-	elif _card.modulate.a > 0.0 and (event is InputEventKey or event is InputEventMouseButton) and event.is_pressed():
+	elif _card.modulate.a > 0.0 and (event is InputEventKey or event is InputEventMouseButton) and event.is_pressed() \
+			and not event.is_action("release_mouse"):
 		_skip = true
+
+
+## How black the screen is right now (0..1), for the pause menu.
+func blackout() -> float:
+	return _black.color.a
 
 
 func set_objective(text: String) -> void:
@@ -188,6 +194,9 @@ func read_note(text: String) -> void:
 	_skip = false
 	while not _skip and not fast:
 		await get_tree().process_frame
+		await _still_here()
+		if get_tree().paused:
+			_skip = false
 	_note_panel.visible = false
 
 
@@ -203,5 +212,14 @@ func wait(seconds: float, skippable: bool) -> void:
 	var t := 0.0
 	while t < seconds and not (skippable and _skip):
 		await get_tree().process_frame
-		t += get_process_delta_time()
+		await _still_here()
+		if not get_tree().paused:
+			t += get_process_delta_time()
 	_skip = false
+
+
+## Left the level mid-line (the pause menu's Main Menu): the scene is being
+## freed, so park the story here for good instead of running on without it.
+func _still_here() -> void:
+	if not is_inside_tree():
+		await tree_entered

@@ -12,9 +12,17 @@ This branch is the **Godot 4** version, in the `Godot/` folder. It runs on modes
 2. Start Godot, click **Import**, and pick `Godot/project.godot`.
 3. Press **F5** (or the ▶ button) to play.
 
-The game starts in the story level, **Blackwood** (`scenes/story.tscn`). The original chase levels are still there: open `scenes/building.tscn` (which leads into `scenes/jungle.tscn`) and press **F6** to play them. Everything runs with **zero imported assets**: the creature, props and forest are built from code and basic shapes, and the music and sounds are synthesised by a script (see below).
+The game opens on the title screen (`scenes/main_menu.tscn`):
 
-Press **Esc** to free the mouse, and click the game window to capture it again.
+- **New Game** plays the story level, **Blackwood** (`scenes/story.tscn`).
+- **Chase Mode** plays the original chase levels: the Building, then the Jungle.
+- **Settings** has mouse sensitivity, volume and fullscreen. They're saved between runs.
+
+In any level, **Esc** pauses the game, with options to resume, restart the level, change settings, go back to the title screen, or quit.
+
+Everything runs with **zero imported assets**: the creature, props and forest are built from code and basic shapes, and the music and sounds are synthesised by a script (see below).
+
+Press **Esc** to pause, which also frees the mouse.
 
 ## The story: Blackwood
 

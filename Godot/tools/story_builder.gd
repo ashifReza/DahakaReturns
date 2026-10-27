@@ -13,6 +13,7 @@ extends RefCounted
 const PlayerScript := preload("res://scripts/player.gd")
 const PursuerScript := preload("res://scripts/pursuer.gd")
 const ForestScript := preload("res://scripts/forest.gd")
+const JungleScript := preload("res://scripts/jungle_area.gd")
 const TriggerScript := preload("res://scripts/chase_trigger.gd")
 const VentScript := preload("res://scripts/vent_zone.gd")
 const SafeScript := preload("res://scripts/safe_zone.gd")
@@ -36,16 +37,30 @@ const STREET_CLEAR := Rect2(-200, FOREST_EDGE, 400, 100)
 ## A barricade across the road: the far side is only reached at the end.
 const BARRICADE_X := -40.0
 
-## The search trail, from the road to the house's clearing.
-const TRAIL := [
-	Vector2(0, 6), Vector2(0, -12), Vector2(5, -30), Vector2(2, -50), Vector2(-5, -68),
-	Vector2(-7, -86), Vector2(-2, -104), Vector2(4, -122), Vector2(3, -140), Vector2(0, -156),
+## A short trail from the road into the jungle.
+const TRAILHEAD := [Vector2(0, 6), Vector2(0, -13)]
+## The open jungle where Daniel's things are scattered. Roam it freely.
+const SEARCH := Rect2(-60, -125, 120, 113)
+## Where each of Daniel's belongings lies, by a landmark, far apart.
+const CLUE_SPOTS := [
+	Vector2(-41, -31), Vector2(36, -28), Vector2(-3, -54), Vector2(43, -76),
+	Vector2(-42, -87), Vector2(16, -103), Vector2(-19, -109),
 ]
-## The escape trail, from the kitchen's back door back to the road.
+## Things to steer by in the search area, each beside a clue:
+## [name, centre, radius kept clear of trees].
+const LANDMARKS := [
+	["Wreck", Vector2(-45, -34), 6.0], ["Boulder", Vector2(40, -24), 6.0], ["FallenGiant", Vector2(-6, -58), 9.0],
+	["HuntingStand", Vector2(46, -80), 5.0], ["Well", Vector2(-46, -90), 5.0], ["Outcrop", Vector2(20, -107), 7.0],
+	["Camp", Vector2(-22, -113), 7.0],
+]
+## Where the drag marks leave the jungle, through a thicket, for the house.
+const HOUSE_TRAIL := [Vector2(10, -124), Vector2(6, -140), Vector2(0, -157)]
+## The escape trail, from the kitchen's back door back to the road, well
+## west of the search area.
 const ESCAPE := [
-	Vector2(-16, -178), Vector2(-32, -180), Vector2(-46, -172), Vector2(-58, -156), Vector2(-64, -136),
-	Vector2(-60, -114), Vector2(-64, -92), Vector2(-62, -70), Vector2(-66, -48), Vector2(-63, -26),
-	Vector2(-64, -6), Vector2(-64, 6),
+	Vector2(-16, -178), Vector2(-34, -182), Vector2(-52, -176), Vector2(-70, -168), Vector2(-86, -152),
+	Vector2(-96, -130), Vector2(-92, -108), Vector2(-98, -86), Vector2(-94, -64), Vector2(-99, -42),
+	Vector2(-95, -20), Vector2(-96, -4), Vector2(-96, 6),
 ]
 ## The house: front wall centre at ground level. Rooms are built relative to it.
 const HOUSE := Vector3(0, 0, -168)
@@ -54,8 +69,8 @@ const FLOOR := 1.0
 const CEIL := 4.4
 const DOOR_H := 3.0
 const WALL_T := 0.3
-## Where along TRAIL (0..1) the thicket blocks the way until every clue is found.
-const THICKET_T := 0.84
+## Where along HOUSE_TRAIL (0..1) the thicket blocks the way until every clue is found.
+const THICKET_T := 0.04
 
 var root: Node3D
 var _folders := {}
@@ -107,6 +122,7 @@ func build() -> Node3D:
 	_car()
 	_forests()
 	_trail_set_pieces()
+	_landmarks()
 	_clues()
 	_house()
 	_escape_route()
@@ -318,7 +334,7 @@ func _street() -> void:
 	# Street lamps along the north side, and one at the trail entrance.
 	var posts := _folder("Street/LampPosts")
 	var k := 0
-	for at in [Vector2(-30, 27.5), Vector2(-5, 27.5), Vector2(20, 27.5), Vector2(42, 27.5), Vector2(6, 8.5), Vector2(-75, 27.5), Vector2(-55, 8.5)]:
+	for at in [Vector2(-30, 27.5), Vector2(-5, 27.5), Vector2(20, 27.5), Vector2(42, 27.5), Vector2(6, 8.5), Vector2(-75, 27.5), Vector2(-88, 8.5), Vector2(-108, 27.5)]:
 		var arm := 1.6 if at.y > 20 else -1.6
 		_cyl("Post_%d" % k, posts, Vector3(at.x, 3.0, at.y), 0.09, 6.0, METAL)
 		_prop("Arm_%d" % k, posts, Vector3(at.x, 5.9, at.y - arm * 0.5), Vector3(0.1, 0.1, 1.6), METAL)
@@ -345,14 +361,14 @@ func _street() -> void:
 	# Invisible bounds: the forest edge (gaps for both trails), the far side,
 	# the east end, and the barricade.
 	_wall_line("Edge_East", "Street/Bounds", Vector2(7.0, FOREST_EDGE), Vector2(48, FOREST_EDGE))
-	_wall_line("Edge_Mid", "Street/Bounds", Vector2(-57.0, FOREST_EDGE), Vector2(-7.0, FOREST_EDGE))
-	_wall_line("Edge_West", "Street/Bounds", Vector2(-110, FOREST_EDGE), Vector2(-71.0, FOREST_EDGE))
+	_wall_line("Edge_Mid", "Street/Bounds", Vector2(-89.0, FOREST_EDGE), Vector2(-7.0, FOREST_EDGE))
+	_wall_line("Edge_West", "Street/Bounds", Vector2(-125, FOREST_EDGE), Vector2(-103.0, FOREST_EDGE))
 	# Short walls joining the edge to each trail's own walls.
-	for x in [-71.0, -57.0, -7.0, 7.0]:
+	for x in [-103.0, -89.0, -7.0, 7.0]:
 		_wall_line("Trailhead_%d" % int(x), "Street/Bounds", Vector2(x, FOREST_EDGE), Vector2(x, 6.5))
-	_wall_line("North", "Street/Bounds", Vector2(-110, 34), Vector2(48, 34))
+	_wall_line("North", "Street/Bounds", Vector2(-125, 34), Vector2(48, 34))
 	_wall_line("East", "Street/Bounds", Vector2(48, FOREST_EDGE), Vector2(48, 34))
-	_wall_line("West", "Street/Bounds", Vector2(-110, FOREST_EDGE), Vector2(-110, 34))
+	_wall_line("West", "Street/Bounds", Vector2(-125, FOREST_EDGE), Vector2(-125, 34))
 	_wall_line("Barricade", "Street/Bounds", Vector2(BARRICADE_X, FOREST_EDGE), Vector2(BARRICADE_X, 34))
 	var barricade := _folder("Street/Barricade")
 	for z in [9.0, 14.0, 18.5, 23.0]:
@@ -572,14 +588,46 @@ func _forest(label: String, path: Array, clearings: Array[Rect2], walls := true,
 
 func _forests() -> void:
 	var house_clear := CLEARING
-	var keep_clear: Array[Rect2] = [STREET_CLEAR, house_clear]
-	_forest("TrailForest", TRAIL, keep_clear, true, 7.0, 16.0, 3)
-	_forest("EscapeForest", ESCAPE, keep_clear, true, 7.0, 16.0, 8)
+	var trail_clear: Array[Rect2] = [STREET_CLEAR, SEARCH]
+	_forest("TrailheadForest", TRAILHEAD, trail_clear, true, 7.0, 14.0, 3)
+	var house_trail_clear: Array[Rect2] = [SEARCH, house_clear]
+	_forest("HouseTrailForest", HOUSE_TRAIL, house_trail_clear, true, 7.0, 14.0, 4)
+	var escape_clear: Array[Rect2] = [STREET_CLEAR, house_clear]
+	_forest("EscapeForest", ESCAPE, escape_clear, true, 7.0, 16.0, 8)
+
+	# The open search area: room to roam, trees to weave between.
+	var search: Node3D = JungleScript.new()
+	search.name = "SearchArea"
+	_add(search, "Jungle")
+	search.set("area", SEARCH)
+	search.set("forest_depth", 14.0)
+	search.set("grow_seed", 12)
+	search.set("rustle_sound", Audio.sfx("rustle"))
+	var around_gaps: Array[Rect2] = [STREET_CLEAR, Rect2(-8, -16, 16, 20), Rect2(1, -142, 18, 20)]
+	search.set("clearings", around_gaps)
+	var spots := PackedVector3Array()
+	for c in CLUE_SPOTS:
+		spots.append(Vector3(c.x, 2.5, c.y))
+	for l in LANDMARKS:
+		spots.append(Vector3(l[1].x, l[2], l[1].y))
+	spots.append(Vector3(0, 6.0, -14))  # where you come in
+	spots.append(Vector3(10, 5.0, -122))  # the thicket
+	search.set("clear_spots", spots)
+
+	# Its invisible bounds, with gaps for the trailhead and the house trail.
+	var a := SEARCH
+	_wall_line("Search_N1", "Jungle/Bounds", Vector2(a.position.x, a.end.y), Vector2(-7, a.end.y))
+	_wall_line("Search_N2", "Jungle/Bounds", Vector2(7, a.end.y), Vector2(a.end.x, a.end.y))
+	_wall_line("Search_S1", "Jungle/Bounds", Vector2(a.position.x, a.position.y), Vector2(3, a.position.y))
+	_wall_line("Search_S2", "Jungle/Bounds", Vector2(17, a.position.y), Vector2(a.end.x, a.position.y))
+	_wall_line("Search_W", "Jungle/Bounds", Vector2(a.position.x, a.position.y), Vector2(a.position.x, a.end.y))
+	_wall_line("Search_E", "Jungle/Bounds", Vector2(a.end.x, a.position.y), Vector2(a.end.x, a.end.y))
+
 	# A belt of trees along the road, with gaps for the two trails.
-	var belt: Array[Rect2] = [STREET_CLEAR, Rect2(-7.5, -40, 15, 44), Rect2(-72, -40, 16, 44)]
-	_forest("RoadsideTrees", [Vector2(-115, -9), Vector2(50, -9)], belt, false, 0.0, 12.0, 5)
+	var belt: Array[Rect2] = [STREET_CLEAR, SEARCH, Rect2(-7.5, -16, 15, 20), Rect2(-104, -16, 16, 20)]
+	_forest("RoadsideTrees", [Vector2(-130, -4.5), Vector2(75, -4.5)], belt, false, 0.0, 8.0, 5)
 	# And a ring round the house's clearing.
-	var ring: Array[Rect2] = [house_clear, Rect2(-8, -170, 16, 60), Rect2(-42, -188, 24, 18)]
+	var ring: Array[Rect2] = [house_clear, Rect2(-8, -160, 26, 40), Rect2(-42, -190, 24, 20)]
 	_forest("ClearingTrees", [Vector2(-23, -153), Vector2(23, -153), Vector2(23, -199), Vector2(-23, -199), Vector2(-23, -153)],
 		ring, false, 0.0, 12.0, 6)
 
@@ -595,8 +643,8 @@ func _forests() -> void:
 
 func _trail_set_pieces() -> void:
 	# The thicket: impassable until every clue is found.
-	var at := _along(TRAIL, THICKET_T)
-	var dir := _heading(TRAIL, at)
+	var at := _along(HOUSE_TRAIL, THICKET_T)
+	var dir := _heading(HOUSE_TRAIL, at)
 	var yaw := Chase.facing(dir)
 	_collider("ThicketBarrier", "Jungle", Transform3D(Basis(Vector3.UP, yaw), at + Vector3.UP * 2.0), Vector3(16, 4, 1.0))
 	var thicket := Node3D.new()
@@ -631,8 +679,8 @@ func _trail_set_pieces() -> void:
 	var steps := 46
 	for k in steps:
 		var t := THICKET_T - 0.01 + (1.0 - THICKET_T + 0.01) * k / float(steps)
-		var p := _along(TRAIL, t)
-		var d := _heading(TRAIL, p)
+		var p := _along(HOUSE_TRAIL, t)
+		var d := _heading(HOUSE_TRAIL, p)
 		var across := d.cross(Vector3.UP)
 		for side in [-0.22, 0.22]:
 			_prop("Mark_%02d_%d" % [k, int(side * 10)], marks, p + across * (side + sin(k * 0.7) * 0.15) + Vector3.UP * 0.012,
@@ -643,38 +691,135 @@ func _trail_set_pieces() -> void:
 
 
 # ---------------------------------------------------------------------------
+# Landmarks in the search area
+# ---------------------------------------------------------------------------
+
+func _landmarks() -> void:
+	var rust := _mat(Color(0.22, 0.1, 0.05), 0.8)
+	var stone := _mat(Color(0.16, 0.16, 0.15))
+	var moss := _mat(Color(0.08, 0.12, 0.06))
+	var canvas := _mat(Color(0.16, 0.17, 0.1))
+	var f := "Jungle/Landmarks"
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 31
+
+	# A rusted-out car, years in the undergrowth.
+	var w: Vector2 = LANDMARKS[0][1]
+	_box("Wreck_Body", f, Vector3(w.x, 0.5, w.y), Vector3(1.8, 0.9, 4.2), rust, true, Vector3(0, 30, 6))
+	_box("Wreck_Cabin", f, Vector3(w.x + 0.15, 1.25, w.y + 0.2), Vector3(1.6, 0.6, 2.0), rust, false, Vector3(0, 30, 6))
+	_box("Wreck_Door", f, Vector3(w.x + 1.6, 0.15, w.y + 1.1), Vector3(1.1, 0.06, 0.9), rust, false, Vector3(0, 70, 0))
+
+	# A boulder the size of a van, split down the middle.
+	var b: Vector2 = LANDMARKS[1][1]
+	_box("Boulder_A", f, Vector3(b.x, 1.4, b.y), Vector3(3.6, 2.8, 3.0), stone, true, Vector3(8, 20, 5))
+	_box("Boulder_B", f, Vector3(b.x + 2.6, 1.0, b.y - 1.0), Vector3(2.4, 2.0, 2.6), stone, true, Vector3(-6, 50, 10))
+	_box("Boulder_Moss", f, Vector3(b.x + 0.2, 2.85, b.y), Vector3(2.8, 0.12, 2.2), moss, false, Vector3(8, 20, 5))
+
+	# A giant that came down long ago, roots and all.
+	var g: Vector2 = LANDMARKS[2][1]
+	var trunk := CSGCylinder3D.new()
+	trunk.name = "FallenGiant"
+	trunk.radius = 1.0
+	trunk.height = 20.0
+	trunk.sides = 12
+	trunk.material = BARK
+	trunk.use_collision = true
+	trunk.collision_layer = 1
+	trunk.transform = Transform3D(Basis(Vector3.UP, deg_to_rad(-15)) * Basis(Vector3.FORWARD, PI * 0.5), Vector3(g.x, 0.85, g.y))
+	_add(trunk, f)
+	var roots := CSGCylinder3D.new()
+	roots.name = "FallenGiant_Roots"
+	roots.radius = 2.4
+	roots.height = 0.7
+	roots.material = BARK
+	roots.use_collision = true
+	roots.collision_layer = 1
+	roots.transform = Transform3D(Basis(Vector3.UP, deg_to_rad(-15)) * Basis(Vector3.FORWARD, PI * 0.5), Vector3(g.x - 9.8, 1.6, g.y - 2.6))
+	_add(roots, f)
+
+	# A hunting stand on stilts, its ladder half gone.
+	var h: Vector2 = LANDMARKS[3][1]
+	for lx in [-1.0, 1.0]:
+		for lz in [-1.0, 1.0]:
+			_box("Stand_Leg_%d_%d" % [int(lx), int(lz)], f, Vector3(h.x + lx, 2.1, h.y + lz), Vector3(0.16, 4.2, 0.16), DARK_WOOD, true, Vector3(lz * 3, 0, -lx * 3))
+	_box("Stand_Floor", f, Vector3(h.x, 4.2, h.y), Vector3(2.6, 0.14, 2.6), PLANKS, false)
+	for side in [-1.0, 1.0]:
+		_box("Stand_Rail_%d" % int(side), f, Vector3(h.x + side * 1.25, 4.8, h.y), Vector3(0.08, 0.08, 2.6), DARK_WOOD, false)
+	_box("Stand_Roof", f, Vector3(h.x, 6.0, h.y), Vector3(2.9, 0.1, 2.9), ROOF, false, Vector3(8, 0, 0))
+	for k in 5:
+		if k == 2:
+			continue  # a missing rung
+		_box("Stand_Rung_%d" % k, f, Vector3(h.x, 0.5 + k * 0.7, h.y + 1.2), Vector3(0.7, 0.06, 0.06), DARK_WOOD, false)
+
+	# An old stone well, boarded over.
+	var e: Vector2 = LANDMARKS[4][1]
+	for k in 10:
+		var a := TAU * k / 10.0
+		_box("Well_Stone_%d" % k, f, Vector3(e.x + cos(a) * 1.1, 0.45, e.y + sin(a) * 1.1), Vector3(0.75, 0.9, 0.35), stone, true, Vector3(0, -rad_to_deg(a) + 90, 0))
+	_box("Well_Dark", f, Vector3(e.x, 0.6, e.y), Vector3(1.6, 0.02, 1.6), _mat(Color(0, 0, 0)), false)
+	for side in [-1.0, 1.0]:
+		_box("Well_Post_%d" % int(side), f, Vector3(e.x + side * 1.2, 1.2, e.y), Vector3(0.14, 2.4, 0.14), DARK_WOOD, false)
+	_box("Well_Beam", f, Vector3(e.x, 2.35, e.y), Vector3(2.6, 0.12, 0.12), DARK_WOOD, false)
+	_box("Well_Board", f, Vector3(e.x + 0.2, 0.93, e.y), Vector3(2.2, 0.05, 0.3), BOARDS, false, Vector3(0, 25, 4))
+
+	# A ledge of bare rock pushing out of the ground.
+	var o: Vector2 = LANDMARKS[5][1]
+	for k in 5:
+		var size := Vector3(rng.randf_range(2.5, 4.5), rng.randf_range(1.0, 3.2), rng.randf_range(2.0, 3.5))
+		_box("Outcrop_%d" % k, f, Vector3(o.x + (k - 2) * 2.2 + 2.0, size.y * 0.5 - 0.2, o.y - 3.0 + rng.randf_range(-1, 1)), size, stone, true,
+			Vector3(rng.randf_range(-8, 8), rng.randf_range(0, 60), rng.randf_range(-8, 8)))
+
+	# Someone's camp, long cold: a collapsed tent, a fire ring, a log to sit on.
+	var c: Vector2 = LANDMARKS[6][1]
+	for side in [-1.0, 1.0]:
+		_box("Tent_%d" % int(side), f, Vector3(c.x + side * 0.55, 0.62, c.y - 1.5), Vector3(0.05, 1.5, 2.4), canvas, false, Vector3(0, 0, side * 38))
+	_box("Tent_Torn", f, Vector3(c.x + 1.4, 0.05, c.y - 0.8), Vector3(1.2, 0.03, 0.9), canvas, false, Vector3(0, 30, 0))
+	for k in 9:
+		var a := TAU * k / 9.0
+		_cyl("FireStone_%d" % k, _folder(f), Vector3(c.x + 2.6 + cos(a) * 0.6, 0.08, c.y + 1.4 + sin(a) * 0.6), 0.14, 0.16, stone)
+	_cyl("Ash", _folder(f), Vector3(c.x + 2.6, 0.02, c.y + 1.4), 0.5, 0.02, _mat(Color(0.12, 0.12, 0.12)))
+	var seat := CSGCylinder3D.new()
+	seat.name = "Camp_Log"
+	seat.radius = 0.25
+	seat.height = 2.4
+	seat.material = BARK
+	seat.use_collision = true
+	seat.collision_layer = 1
+	seat.transform = Transform3D(Basis(Vector3.UP, 0.4) * Basis(Vector3.FORWARD, PI * 0.5), Vector3(c.x + 4.0, 0.25, c.y + 0.5))
+	_add(seat, f)
+
+
+# ---------------------------------------------------------------------------
 # Daniel's belongings
 # ---------------------------------------------------------------------------
 
 func _clues() -> void:
 	var specs := [
-		[0.07, 2.2, "Car keys", "[E] Pick up the keys",
-			"Car keys. A Toyota fob... Daniel drives a Toyota. So he did come this way."],
-		[0.18, -2.4, "Torn sleeve", "[E] Pick up the torn cloth",
+		["Car keys", "[E] Pick up the keys",
+			"Car keys, by that wreck. A Toyota fob... Daniel drives a Toyota. So he did come this way."],
+		["Torn sleeve", "[E] Pick up the torn cloth",
 			"Blue denim, torn off at the seam. Torn, not cut. He was caught on something. Or by something."],
-		[0.29, 1.8, "Phone", "[E] Pick up the phone",
-			"His phone. Screen's smashed, battery's dead. Last place it pinged was the road. So he was out here by then."],
-		[0.4, -2.0, "Wallet", "[E] Pick up the wallet",
-			"Daniel Reyes. License, forty dollars, a photo of his kid. Nobody robbed him."],
-		[0.51, 2.4, "Shoe", "[E] Pick up the shoe",
-			"One shoe. Laces still tied. You don't lose a tied shoe walking. You lose it being dragged."],
-		[0.62, -2.2, "Glasses", "[E] Pick up the glasses",
+		["Phone", "[E] Pick up the phone",
+			"His phone, by the fallen tree. Screen's smashed, battery's dead. Like he dropped it running."],
+		["Wallet", "[E] Pick up the wallet",
+			"His wallet, under the hunting stand. License, forty dollars, a photo of his kid. Nobody robbed him."],
+		["Shoe", "[E] Pick up the shoe",
+			"One shoe, by the well. Laces still tied. You don't lose a tied shoe walking. You lose it being dragged."],
+		["Glasses", "[E] Pick up the glasses",
 			"Glasses, snapped clean in half. Out here without these, he'd have been blind in the dark."],
-		[0.74, 1.6, "Backpack", "[E] Pick up the backpack",
-			"His backpack. The strap's soaked through. That's blood. Not old, either."],
+		["Backpack", "[E] Pick up the backpack",
+			"His backpack, at someone's old camp. The strap's soaked through. That's blood. Not old, either."],
 	]
 	var folder := _folder("Clues")
 	for i in specs.size():
 		var spec: Array = specs[i]
-		var at := _along(TRAIL, spec[0])
-		var dir := _heading(TRAIL, at)
 		var item: StoryInteractable = ItemScript.new()
 		item.name = "Clue_%d" % (i + 1)
-		item.position = at + dir.cross(Vector3.UP) * float(spec[1])
+		item.position = p3(CLUE_SPOTS[i])
 		item.rotation.y = float(i) * 1.7
-		item.label = spec[2]
-		item.prompt = spec[3]
-		item.thought = spec[4]
+		item.label = spec[0]
+		item.prompt = spec[1]
+		item.thought = spec[2]
 		item.use_sound = Audio.sfx("pickup")
 		folder.add_child(item)
 		_own(item)
@@ -1049,15 +1194,17 @@ func _escape_route() -> void:
 	vent.set("extent", Vector3(8, 1, 5.5))
 	vent.set("ambush_delay", 1.0)
 	_add(vent, "Gameplay")
-	vent.set("ambush_point", _marker(vent, "AmbushPoint", tangle_at + tangle_dir * 13.0 + tangle_dir.cross(Vector3.UP) * 4.0, -tangle_dir))
+	# It comes round the side of the tangle, just behind where you climb out.
+	var beside := tangle_dir.cross(Vector3.UP) * 5.5
+	vent.set("ambush_point", _marker(vent, "AmbushPoint", tangle_at + tangle_dir * 6.0 + beside, tangle_dir))
 
 	_trigger("Checkpoint_AfterRoots", tangle_at + tangle_dir * 9.0 + Vector3.UP * 1.75, yaw, Vector3(8, 1.75, 0.8),
-		tangle_at + tangle_dir * 12.0 + tangle_dir.cross(Vector3.UP) * 3.0, -tangle_dir,
-		tangle_at + tangle_dir * 10.0, tangle_dir)
+		tangle_at + tangle_dir * 6.0 + beside, tangle_dir,
+		tangle_at + tangle_dir * 16.0, tangle_dir)
 
 	# Backup waiting on the road where the trail comes out.
-	_police_car("Backup_1", "Street", Vector3(-70, 0, 16.5), Vector3(1, 0, 0.3), true)
-	_police_car("Backup_2", "Street", Vector3(-57, 0, 18), Vector3(-1, 0, 0.4), true)
+	_police_car("Backup_1", "Street", Vector3(-103, 0, 16.5), Vector3(1, 0, 0.3), true)
+	_police_car("Backup_2", "Street", Vector3(-89, 0, 18), Vector3(-1, 0, 0.4), true)
 
 
 # ---------------------------------------------------------------------------
@@ -1106,7 +1253,7 @@ func _gameplay() -> void:
 	safe.position = p3(ESCAPE[-1]) + Vector3(0, 1.5, 1.5)
 	safe.set("extent", Vector3(9, 1.5, 3))
 
-	for b in [["Battery_Trail", _along(TRAIL, 0.46) + Vector3(-3.2, 0.4, 0)], ["Battery_Escape", _along(ESCAPE, 0.4) + Vector3(2.5, 0.4, 0)]]:
+	for b in [["Battery_Wreck", Vector3(-46, 0.4, -36)], ["Battery_Stand", Vector3(48, 0.4, -82)], ["Battery_Escape", _along(ESCAPE, 0.4) + Vector3(2.5, 0.4, 0)]]:
 		var pickup: Area3D = BatteryScript.new()
 		pickup.name = b[0]
 		pickup.position = b[1]
@@ -1130,8 +1277,8 @@ func _trigger(label: String, at: Vector3, yaw: float, extent: Vector3, pursuer_a
 func _zones() -> void:
 	var specs := [
 		["Entrance", Vector3(0, 1.5, 7.2), Vector3(7, 1.5, 1.4), 0.0, true],
-		["JungleIn", _along(TRAIL, 0.04) + Vector3.UP * 1.5, Vector3(7, 1.5, 1.0), 0.0, true],
-		["Thicket", _along(TRAIL, THICKET_T - 0.012) + Vector3.UP * 1.5, Vector3(7.5, 1.5, 1.2), Chase.facing(_heading(TRAIL, _along(TRAIL, THICKET_T))), false],
+		["JungleIn", Vector3(0, 1.5, -15), Vector3(7, 1.5, 1.5), 0.0, true],
+		["Thicket", Vector3(10, 1.5, -120.5), Vector3(7, 1.5, 2.0), 0.0, false],
 		["Clearing", Vector3(0, 1.5, -157), Vector3(7, 1.5, 1.0), 0.0, true],
 		["HouseInside", _house_pos(Vector3(0, FLOOR + 1.5, -1.8)), Vector3(3.0, 1.5, 0.8), 0.0, true],
 		["LivingRoom", _house_pos(Vector3(0, FLOOR + 1.5, -4.8)), Vector3(8.5, 1.5, 1.4), 0.0, true],

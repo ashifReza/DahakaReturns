@@ -3,14 +3,18 @@ extends Node
 ## Runs the story level from start to finish, like a script:
 ##
 ##   title cards -> in the car (dispatch, his thoughts) -> out, across the
-##   road -> no flashlight: get it from the trunk -> into the jungle to find
-##   Daniel's 7 belongings while the sun goes down (noises, a shadow figure
-##   between the trees) -> the drag marks lead through the brush -> a house
+##   road -> no flashlight: get it from the trunk -> roam the jungle for
+##   Daniel's 7 belongings, scattered far apart, while the sun goes down
+##   (noises and a shadow figure between the trees, at random) -> the drag
+##   marks lead through the brush -> a house
 ##   in the dark -> the door slams, the lights come on -> blood, drag marks,
 ##   chains -> Daniel's note -> it's behind you -> a revolver in the kitchen
 ##   (shots slow it) -> force the back door -> run for the road -> safe.
 ##
 ## Lives at the level root as "Director"; finds everything by name.
+
+## A random scare went off out in the jungle (for playtests and debugging).
+signal scared(kind: String)
 
 enum Phase { INTRO, CAR, STREET, FLASHLIGHT, SEARCH, TRAIL, HOUSE, CHASE, ENDED }
 
@@ -80,6 +84,11 @@ var _sun: DirectionalLight3D
 var _moon: DirectionalLight3D
 var _lamps: Array[Light3D] = []
 var _kitchen_hinted := false
+## Random scares while you're out in the jungle.
+var _scares_on := false
+var _scare_timer := 0.0
+var _last_scare := ""
+var _speaking := false
 
 
 func _ready() -> void:
@@ -133,6 +142,11 @@ func _zone(zone_name: String) -> StoryZone:
 
 
 func _process(delta: float) -> void:
+	if _scares_on and phase in [Phase.SEARCH, Phase.TRAIL] and not player.controls_locked:
+		_scare_timer -= delta
+		if _scare_timer <= 0.0:
+			_scare_timer = randf_range(20.0, 45.0)
+			_random_scare()
 	if not is_equal_approx(_night, _night_target):
 		_night = move_toward(_night, _night_target, delta * (1.0 if fast_mode else 0.06))
 		_apply_night()
@@ -192,10 +206,20 @@ func _on_trunk() -> void:
 
 
 func _on_jungle_in() -> void:
-	await ui.lines([
+	_scares_on = true
+	_scare_timer = randf_range(15.0, 25.0)
+	await _say([
 		["Hale", "Daniel? DANIEL REYES! Police!"],
 		["", "Nothing. Not even birds."],
-		["", "If he came this way, he might have dropped something."]])
+		["", "He could be anywhere in here. Anything he dropped should catch the light."]])
+	player.show_hint("Search the jungle. Look for anything that glints.", 5.0)
+
+
+## Lines that random scares shouldn't talk over.
+func _say(entries: Array) -> void:
+	_speaking = true
+	await ui.lines(entries)
+	_speaking = false
 
 
 func _on_clue(item: StoryInteractable) -> void:
@@ -203,11 +227,13 @@ func _on_clue(item: StoryInteractable) -> void:
 	var n := clues_found
 	_night_target = 0.9 * float(n) / CLUE_COUNT
 	ui.set_objective("Search the forest for any sign of Daniel. (%d/%d)" % [n, CLUE_COUNT])
+	_speaking = true
 	await ui.line("", item.thought)
+	_speaking = false
 	if n == CLUE_COUNT:
 		await _all_clues_found()
 	else:
-		await _scare(n)
+		await _nudge()
 
 
 func _all_clues_found() -> void:
@@ -215,38 +241,93 @@ func _all_clues_found() -> void:
 	var thicket: Node3D = _node("Jungle/Thicket")
 	thicket.visible = false
 	(_node("Jungle/ThicketBarrier") as CollisionObject3D).collision_layer = 0
-	ui.set_objective("Follow the drag marks.")
+	ui.set_objective("Follow the drag marks. They lead south, through the thicket.")
 	await ui.wait(1.0, false)
-	await ui.lines([
+	await _say([
 		["", "Drag marks in the dirt. Something heavy was pulled through the brush up ahead."],
 		["", "That's a trail. A real one."],
 		["", "It's dark. I should call this in."],
 		["", "...and say what? I found a shoe? Keep going."]])
 
 
-## Something after each find, so the forest never feels empty.
-func _scare(n: int) -> void:
-	await ui.wait(1.2 if n % 2 == 0 else 2.5, false)
-	match n:
-		2:
+## After a find: which way to look next, from where he's facing.
+func _nudge() -> void:
+	var best: StoryInteractable = null
+	var best_d := INF
+	for clue in _node("Clues").get_children():
+		var item := clue as StoryInteractable
+		if item.available:
+			var d := item.global_position.distance_to(player.global_position)
+			if d < best_d:
+				best_d = d
+				best = item
+	if best == null:
+		return
+	var to := best.global_position - player.global_position
+	to.y = 0.0
+	var forward := -player.camera.global_basis.z
+	forward.y = 0.0
+	var angle := rad_to_deg(forward.normalized().signed_angle_to(to.normalized(), Vector3.UP))
+	var where := "up ahead"
+	if absf(angle) > 130.0:
+		where = "back the way I came"
+	elif angle > 35.0:
+		where = "off to my left"
+	elif angle < -35.0:
+		where = "off to my right"
+	var far := "a long way " if best_d > 45.0 else ""
+	var line: String = [
+		"Footprints. Bare, one foot. They head %s%s." % [far, where],
+		"Something's been dragged through the ferns, %s%s." % [far, where],
+		"Broken branches, %s%s. Someone pushed through there." % [far, where],
+	][clues_found % 3]
+	await ui.wait(0.6, false)
+	await _say([["", line]])
+
+
+## Every so often out in the jungle: a noise, or the figure in the trees.
+func _random_scare() -> void:
+	var kinds := ["branch", "rustle", "steps", "figure", "whoosh"]
+	if clues_found >= 3:
+		kinds.append("screech")
+		kinds.append("figure")
+	kinds.erase(_last_scare)
+	var kind: String = kinds.pick_random()
+	if kind == "figure" and figure.is_busy():
+		return
+	_last_scare = kind
+	scared.emit(kind)
+	var react := []
+	match kind:
+		"branch":
 			_sound_behind(branch_sound, 1.0)
-			await ui.line("", "...A branch. Just an animal.")
-		3:
+			react = ["...A branch. Just an animal.", "Who's there?!", "Something heavy just stepped on that."]
+		"rustle":
+			_sound_beside(_node("Jungle/SearchArea").get("rustle_sound"), 0.9)
+			react = ["Something in the ferns. Big.", "...Keep moving."]
+		"steps":
+			for k in 3:
+				_sound_behind(_footstep(), 0.5)
+				await ui.wait(0.45, false)
+			react = ["Footsteps. When I stop, they stop.", "There's someone out here with me."]
+		"figure":
 			_figure()
-			await ui.wait(1.2, false)
-			await ui.line("Hale", "Hey! HEY! Police! Stop right there!")
-			await ui.line("", "Gone. Was that... Daniel?")
-		4:
+			await ui.wait(1.3, false)
+			react = ["Hey! HEY! Police! Stop right there!", "Gone. Was that... Daniel?", "It's watching me. Keeping its distance."]
+		"whoosh":
 			_sound_behind(whoosh_sound, 0.8)
-			await ui.line("Hale", "Who's there?!")
-		5:
-			_figure()
-			Chase.play_2d(stinger_sound, 0.45)
-			await ui.wait(1.0, false)
-			await ui.line("", "It's following me. Keeping its distance. Watching.")
-		6:
+			react = ["Something just went past me.", "...What was that?"]
+		"screech":
 			_sound_behind(screech_sound, 0.25)
-			await ui.line("", "What the hell was that? That's no animal I know.")
+			react = ["What the hell was that? That's no animal I know.", "That came from deeper in. Way deeper."]
+	if not _speaking and randf() < 0.65:
+		var said: String = react.pick_random()
+		# Shouted lines are out loud; the rest are thoughts.
+		await _say([["Hale" if said.ends_with("!") else "", said]])
+
+
+func _footstep() -> AudioStream:
+	return Chase.pursuer.footstep_sound
 
 
 func _on_thicket() -> void:
@@ -355,6 +436,15 @@ func _on_chase_ended() -> void:
 # ---------------------------------------------------------------------------
 # Scares
 # ---------------------------------------------------------------------------
+
+## A sound to one side, out of view.
+func _sound_beside(stream: AudioStream, volume: float) -> void:
+	var forward := -player.camera.global_basis.z
+	forward.y = 0.0
+	var right := forward.normalized().cross(Vector3.UP)
+	var side := -1.0 if randf() < 0.5 else 1.0
+	Chase.play_at(stream, player.global_position + right * side * 6.0 + Vector3.UP, volume)
+
 
 func _sound_behind(stream: AudioStream, volume: float) -> void:
 	var forward := -player.camera.global_basis.z

@@ -20,6 +20,14 @@ extends Node3D
 ## Path segments whose midpoint z falls in any of these (min_z, max_z) ranges
 ## get no walls or trees: chasms, rivers.
 @export var gaps: Array[Vector2] = []
+## Nothing grows inside these XZ rectangles (a road, a house's clearing).
+@export var clearings: Array[Rect2] = []
+## Off for a plain belt of trees with no invisible walls.
+@export var walls := true
+## Walls across the start and end of the corridor; turn off where the path
+## opens into somewhere else.
+@export var cap_start := true
+@export var cap_end := true
 @export var grow_seed := 1
 @export var rustle_sound: AudioStream
 
@@ -66,8 +74,8 @@ func _build() -> void:
 		var p := Vector3(_rng.randf_range(area.position.x, area.end.x), 0.0, _rng.randf_range(area.position.y, area.end.y))
 		var info := _nearest(p)
 		var d: float = info[0]
-		if info[2]:
-			continue  # over a gap
+		if info[2] or _in_clearing(p):
+			continue  # over a gap, or kept clear
 		if d > corridor_half_width + forest_depth:
 			continue
 		if d < trail_half_width:
@@ -91,7 +99,8 @@ func _build() -> void:
 			elif _rng.randf() < 0.25:
 				bushes.append(_bush(p))
 
-	_walls(body)
+	if walls:
+		_walls(body)
 
 	add_child(_multimesh("Trunks", _trunk_mesh(), trunks, Color(0.11, 0.08, 0.06), true))
 	# Only trunks cast shadows: canopy and bush shadows cost more than a third
@@ -135,6 +144,13 @@ func _nearest(p: Vector3) -> Array:
 			best = d
 			best_i = i
 	return [best, best_i, _in_gap(p.z)]
+
+
+func _in_clearing(p: Vector3) -> bool:
+	for r in clearings:
+		if r.has_point(Vector2(p.x, p.z)):
+			return true
+	return false
 
 
 func _in_gap(z: float) -> bool:
@@ -195,6 +211,8 @@ func _walls(body: StaticBody3D) -> void:
 			_wall_box(body, pts[i], pts[i + 1])
 	# Caps behind the start and beyond the end.
 	for end in [[0, 1], [path.size() - 1, path.size() - 2]]:
+		if (end[0] == 0 and not cap_start) or (end[0] != 0 and not cap_end):
+			continue
 		var p := path[end[0]]
 		var back := (p - path[end[1]]).normalized()
 		var across := back.cross(Vector3.UP) * corridor_half_width

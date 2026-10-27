@@ -63,9 +63,16 @@ func _draw_hud() -> void:
 			var c := Color(0.7, 0.1, 0.08, 0.8) if player.exhausted else Color(0.85, 0.85, 0.8, 0.5)
 			_bar(w * 0.5 - 130.0 * s, h - 70.0 * s, 260.0 * s, 4.0 * s, stamina, c)
 
-		var battery := player.get_battery01()
-		var bc := Color(0.8, 0.2, 0.1, 0.8) if battery < 0.2 else Color(0.6, 0.8, 0.6, 0.5)
-		_bar(w - 150.0 * s, h - 60.0 * s, 100.0 * s, 10.0 * s, battery, bc)
+		if player.has_flashlight:
+			var battery := player.get_battery01()
+			var bc := Color(0.8, 0.2, 0.1, 0.8) if battery < 0.2 else Color(0.6, 0.8, 0.6, 0.5)
+			_bar(w - 150.0 * s, h - 60.0 * s, 100.0 * s, 10.0 * s, battery, bc)
+
+		if player.has_gun:
+			# One pip per round left in the cylinder.
+			for i in player.max_ammo:
+				var c := Color(0.9, 0.8, 0.55, 0.85) if i < player.ammo else Color(1, 1, 1, 0.15)
+				_canvas.draw_circle(Vector2(w - 145.0 * s + i * 17.0 * s, h - 90.0 * s), 5.0 * s, c)
 
 		var prompt := player.get_interact_prompt()
 		if prompt != "":

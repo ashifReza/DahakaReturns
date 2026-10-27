@@ -10,6 +10,10 @@ const HIP_HEIGHT := 1.42
 const TENDRIL_COUNT := 6
 const TENDRIL_SEGMENTS := 7
 
+## Set before it enters the tree: a pale, gaunt cryptid instead of the
+## obsidian demon. Taller, no tendrils, no smoke or embers, cold white eyes.
+var cryptid := false
+
 var _skin: ShaderMaterial
 var _eye_material: StandardMaterial3D
 var _spine: Node3D
@@ -39,12 +43,23 @@ func _ready() -> void:
 	_eye_material.emission_enabled = true
 	_eye_material.emission = Color(1.0, 0.35, 0.08)
 	_eye_material.emission_energy_multiplier = 6.0
+	if cryptid:
+		_skin.set_shader_parameter("base_color", Color(0.24, 0.21, 0.18))
+		_skin.set_shader_parameter("roughness", 0.8)
+		_skin.set_shader_parameter("metallic", 0.0)
+		_skin.set_shader_parameter("specular", 0.35)
+		_skin.set_shader_parameter("vein_color", Color(0.45, 0.02, 0.02))
+		_skin.set_shader_parameter("rim_color", Color(0.4, 0.42, 0.45))
+		_skin.set_shader_parameter("vein_scale", 5.0)
+		_eye_material.emission = Color(0.85, 0.9, 1.0)
+		scale = Vector3.ONE * 1.12
 	_build_legs()
 	_build_torso()
 	_build_head()
 	_build_arms()
-	_build_tendrils()
-	_build_particles()
+	if not cryptid:
+		_build_tendrils()
+		_build_particles()
 
 
 # ---------------------------------------------------------------------------
@@ -166,7 +181,7 @@ func _build_head() -> void:
 
 	_eye_glow = OmniLight3D.new()
 	_eye_glow.position = Vector3(0, 0.05, -0.45)
-	_eye_glow.light_color = Color(1.0, 0.3, 0.08)
+	_eye_glow.light_color = Color(0.8, 0.85, 1.0) if cryptid else Color(1.0, 0.3, 0.08)
 	_eye_glow.omni_range = 2.2
 	_eye_glow.light_energy = 1.2
 	_head.add_child(_eye_glow)
@@ -292,8 +307,9 @@ func get_head_position() -> Vector3:
 
 ## Clears trailing smoke, e.g. after teleporting.
 func reset_particles() -> void:
-	_smoke.restart()
-	_embers.restart()
+	if _smoke:
+		_smoke.restart()
+		_embers.restart()
 
 
 func animate(delta: float, state: int, state_time: float, speed: float) -> void:
@@ -398,4 +414,5 @@ func animate(delta: float, state: int, state_time: float, speed: float) -> void:
 	_skin.set_shader_parameter("rage", _rage)
 	_eye_material.emission_energy_multiplier = (3.0 + _rage * 8.0) * eyes
 	_eye_glow.light_energy = (0.6 + _rage * 2.0) * eyes
-	_smoke.amount_ratio = 0.5 + 0.5 * _rage
+	if _smoke:
+		_smoke.amount_ratio = 0.5 + 0.5 * _rage

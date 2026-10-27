@@ -8,6 +8,8 @@ extends OmniLight3D
 @export_range(0.0, 1.0) var faultiness := 0.3
 ## The light dies while the pursuer is within this distance.
 @export var darken_radius := 7.0
+## Off until something switches the power on.
+@export var powered := true
 
 var _seed := 0.0
 var _level := 1.0
@@ -30,12 +32,12 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	var time := Time.get_ticks_msec() / 1000.0 + _seed
-	var target := 1.0
+	var target := 1.0 if powered else 0.0
 
 	# Random sputters: mostly on, occasionally drops out.
 	var n := Chase.perlin(time * 6.0) * 0.5 + 0.5
 	if n > 1.0 - faultiness * 0.5:
-		target = 0.05
+		target *= 0.05
 
 	var p := Chase.pursuer
 	if is_instance_valid(p) and p.is_active_threat():

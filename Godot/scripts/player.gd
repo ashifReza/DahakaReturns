@@ -52,6 +52,17 @@ extends CharacterBody3D
 @export_group("Interaction")
 @export var interact_range := 2.3
 
+@export_group("Story")
+## Off when the story hands you the flashlight later.
+@export var has_flashlight := true
+
+@export_group("Gun")
+@export var max_ammo := 6
+@export var shot_range := 45.0
+@export var shot_cooldown := 0.55
+@export var gunshot_sound: AudioStream
+@export var dry_fire_sound: AudioStream
+
 @export_group("Sounds")
 @export var flashlight_click_sound: AudioStream
 @export var death_sound: AudioStream
@@ -71,6 +82,12 @@ var dead := false
 var crouched := false
 var sprinting := false
 var flashlight_on := true
+## Cutscenes and dialogue: you can look around but not move or use things.
+var controls_locked := false
+## Sitting in the car: no movement or gravity at all.
+var frozen := false
+var has_gun := false
+var ammo := 0
 
 var _shape: CapsuleShape3D
 var _collider: CollisionShape3D
@@ -92,6 +109,12 @@ var _interacting: Node
 var _hint_text := ""
 var _hint_end := -1.0
 var _hint_duration := 1.0
+var _torch: MeshInstance3D
+var _gun: Node3D
+var _muzzle: OmniLight3D
+var _dark_left := 0.0
+var _shot_cooldown_left := 0.0
+var _recoil := 0.0
 
 
 func _ready() -> void:
@@ -128,6 +151,7 @@ func _ready() -> void:
 	camera.add_child(flashlight)
 
 	var torch := MeshInstance3D.new()
+	_torch = torch
 	var torch_mesh := CylinderMesh.new()
 	torch_mesh.top_radius = 0.0225
 	torch_mesh.bottom_radius = 0.0225
@@ -190,6 +214,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if dead:
 		return
+	if controls_locked and not event is InputEventMouseMotion:
+		return
 
 	if event is InputEventMouseMotion:
 		var moved: Vector2 = event.relative
@@ -212,9 +238,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("jump"):
 		if not crouched and is_on_floor():
 			velocity.y = jump_velocity
-	elif event.is_action_pressed("flashlight"):
+	elif event.is_action_pressed("flashlight") and has_flashlight:
 		flashlight_on = not flashlight_on and battery > 0.0
 		Chase.play_2d(flashlight_click_sound)
+	elif has_gun and event.is_action_pressed("shoot"):
+		_shoot()
 	elif event.is_action_pressed("interact"):
 		_interact_pressed()
 	elif event.is_action_released("interact"):
@@ -243,7 +271,20 @@ func set_forced_crouch(force: bool) -> void:
 # ---------------------------------------------------------------------------
 
 func _physics_process(delta: float) -> void:
-	if not dead:
+	if frozen:
+		velocity = Vector3.ZERO
+		return
+	_shot_cooldown_left = maxf(0.0, _shot_cooldown_left - delta)
+	if controls_locked and not dead:
+		_move_input = Vector2.ZERO
+		_sprint_held = false
+		_look_back_held = false
+		_focus_held = false
+		_focused = null
+		sprinting = false
+		velocity.x = move_toward(velocity.x, 0.0, braking * delta)
+		velocity.z = move_toward(velocity.z, 0.0, braking * delta)
+	elif not dead:
 		_sprint_held = Input.is_action_pressed("sprint")
 		_look_back_held = Input.is_action_pressed("look_back")
 		_focus_held = Input.is_action_pressed("focus_beam")
@@ -321,10 +362,11 @@ func _update_movement(delta: float) -> void:
 func _update_flashlight(delta: float) -> void:
 	var danger := Chase.danger
 	var time := Time.get_ticks_msec() / 1000.0
-	var lit := flashlight_on and battery > 0.0
+	_dark_left = maxf(0.0, _dark_left - delta)
+	var lit := has_flashlight and flashlight_on and battery > 0.0 and _dark_left <= 0.0
 	var focusing := lit and _focus_held and not dead
 
-	if lit:
+	if lit and not frozen:
 		battery = maxf(0.0, battery - (focus_drain if focusing else battery_drain) * delta)
 		if battery <= 0.0:
 			flashlight_on = false
@@ -343,6 +385,13 @@ func _update_flashlight(delta: float) -> void:
 			energy *= 0.06
 
 	flashlight.visible = lit
+	_torch.visible = has_flashlight
+	if is_instance_valid(_muzzle):
+		_muzzle.light_energy = maxf(0.0, _muzzle.light_energy - delta * 60.0)
+	if is_instance_valid(_gun):
+		_recoil = Chase.finterp(_recoil, 0.0, delta, 12.0)
+		_gun.position = Vector3(0.2, -0.2 + _recoil * 0.03, -0.38 + _recoil * 0.06)
+		_gun.rotation_degrees.x = _recoil * 14.0
 	flashlight.light_energy = energy
 	var target_cone := focus_outer_cone if focusing else outer_cone
 	flashlight.spot_angle = Chase.finterp(flashlight.spot_angle, target_cone, delta, 10.0)
@@ -387,7 +436,7 @@ func _update_camera(delta: float) -> void:
 	else:
 		_look_back_alpha = Chase.finterp(_look_back_alpha, 1.0 if _look_back_held else 0.0, delta, look_back_blend_speed)
 		var eased := Chase.ease_in_out(_look_back_alpha, 2.0)
-		view = Vector3(lerpf(_pitch, _pitch * 0.3, eased), _yaw + deg_to_rad(look_back_yaw) * eased, 0.0)
+		view = Vector3(lerpf(_pitch, _pitch * 0.3, eased) + deg_to_rad(_recoil * 2.5), _yaw + deg_to_rad(look_back_yaw) * eased, 0.0)
 	_view = view
 
 	# Head bob scales with speed.
@@ -423,7 +472,7 @@ func _update_interact_target() -> void:
 	_focused = null
 	var from := camera.global_position
 	var to := from - camera.global_basis.z * interact_range
-	var query := PhysicsRayQueryParameters3D.create(from, to, Chase.LAYER_WORLD)
+	var query := PhysicsRayQueryParameters3D.create(from, to, Chase.LAYER_WORLD | Chase.LAYER_INTERACT)
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)
 	if hit.is_empty():
 		return
@@ -469,11 +518,90 @@ func respawn(where: Transform3D) -> void:
 	stamina = max_stamina
 	battery = maxf(battery, max_battery * 0.4)
 	flashlight_on = true
+	controls_locked = false
+	if has_gun:
+		ammo = maxi(ammo, mini(3, max_ammo))
 	hud.fade_to(0.0, 1.2)
 
 
 func add_battery(amount: float) -> void:
 	battery = minf(max_battery, battery + amount)
+
+
+func give_flashlight() -> void:
+	has_flashlight = true
+	flashlight_on = true
+	Chase.play_2d(flashlight_click_sound)
+
+
+## Kills the flashlight for a moment, whatever the battery says.
+func force_dark(seconds: float) -> void:
+	_dark_left = seconds
+
+
+## Snaps the view to face a direction (for cutscenes).
+func look_toward(dir: Vector3) -> void:
+	_yaw = Chase.facing(dir)
+	_pitch = atan2(dir.y, Vector2(dir.x, dir.z).length())
+	rotation.y = _yaw
+
+
+func give_gun(rounds: int) -> void:
+	ammo = mini(max_ammo, ammo + rounds)
+	if has_gun:
+		return
+	has_gun = true
+	# Revolver in the right hand; the torch moves to the left.
+	_gun = Node3D.new()
+	camera.add_child(_gun)
+	var dark := Greybox.material(Color(0.03, 0.03, 0.035))
+	var frame := Greybox.box(Vector3(0.05, 0.07, 0.16), Color.BLACK)
+	frame.material_override = dark
+	_gun.add_child(frame)
+	var barrel := Greybox.cylinder(0.014, 0.2, Color.BLACK)
+	barrel.material_override = dark
+	barrel.rotation_degrees.x = -90.0
+	barrel.position = Vector3(0, 0.015, -0.16)
+	_gun.add_child(barrel)
+	var cylinder := Greybox.cylinder(0.032, 0.06, Color.BLACK)
+	cylinder.material_override = dark
+	cylinder.rotation_degrees.x = -90.0
+	cylinder.position = Vector3(0, 0.0, -0.05)
+	_gun.add_child(cylinder)
+	var grip := Greybox.box(Vector3(0.04, 0.12, 0.05), Color.BLACK)
+	grip.material_override = Greybox.material(Color(0.12, 0.07, 0.04))
+	grip.position = Vector3(0, -0.08, 0.07)
+	grip.rotation_degrees.x = -18.0
+	_gun.add_child(grip)
+	for child in _gun.get_children():
+		child.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_muzzle = OmniLight3D.new()
+	_muzzle.light_color = Color(1.0, 0.75, 0.4)
+	_muzzle.omni_range = 9.0
+	_muzzle.light_energy = 0.0
+	_muzzle.position = Vector3(0, 0.02, -0.32)
+	_gun.add_child(_muzzle)
+	_torch.position.x = -0.18
+	flashlight.position.x = -0.16
+
+
+func _shoot() -> void:
+	if _shot_cooldown_left > 0.0:
+		return
+	_shot_cooldown_left = shot_cooldown
+	if ammo <= 0:
+		Chase.play_2d(dry_fire_sound)
+		return
+	ammo -= 1
+	_recoil = 1.0
+	_muzzle.light_energy = 8.0
+	Chase.play_2d(gunshot_sound)
+	var from := camera.global_position
+	var to := from - camera.global_basis.z * shot_range
+	var query := PhysicsRayQueryParameters3D.create(from, to, Chase.LAYER_WORLD | Chase.LAYER_PURSUER)
+	var hit := get_world_3d().direct_space_state.intersect_ray(query)
+	if not hit.is_empty() and hit.collider is Pursuer:
+		hit.collider.shot()
 
 
 func show_hint(text: String, duration := 4.0) -> void:

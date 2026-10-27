@@ -37,6 +37,16 @@ enum State {
 ## Falling below this height (a chasm) loses the player until an ambush.
 @export var fall_lose_height := -6.0
 
+@export_group("Shot")
+## Being shot makes it flinch, then run at this fraction of its speed for a while.
+@export var shot_flinch := 0.45
+@export var shot_slow_scale := 0.5
+@export var shot_slow_time := 3.5
+
+@export_group("Look")
+## Pale and gaunt instead of obsidian: no tendrils, smoke or embers.
+@export var cryptid := false
+
 @export_group("Stalking")
 ## How far from the player it chooses to appear.
 @export var stalk_min_distance := 7.0
@@ -72,6 +82,8 @@ var concealed := false
 var _state_time := 0.0
 var _stun_cooldown_left := 0.0
 var _stuck_time := 0.0
+var _closest_to_crumb := INF
+var _crumb_index := -1
 var _next_bash_hit := 0.0
 var _anim_phase := 0.0
 var _step_distance := 0.0
@@ -81,6 +93,8 @@ var _trail: Array[Vector3] = []
 var _trail_index := 0
 var _bash_target: ChaseDoor
 
+var _slow_left := 0.0
+var _stun_length := 1.3
 var _stalk_points: Array[Node3D] = []
 var _stalk_wait := 0.0
 var _stalk_seen := 0.0
@@ -98,6 +112,7 @@ func _ready() -> void:
 	collider.position.y = HEIGHT * 0.5
 	add_child(collider)
 	body = CreatureBody.new()
+	body.cryptid = cryptid
 	add_child(body)
 
 	Chase.register_pursuer(self)
@@ -123,13 +138,33 @@ func reset_to(where: Transform3D) -> void:
 	_trail_index = 0
 	trail_gap = INF
 	_bash_target = null
+	_slow_left = 0.0
 	_enter_state(State.DORMANT)
 
 
 func try_stun() -> void:
 	if state != State.CHASING or _stun_cooldown_left > 0.0:
 		return
+	_stun_length = stun_duration
 	_enter_state(State.STUNNED)
+
+
+## Hit by a bullet: it flinches, then can't keep up for a few seconds.
+func shot() -> void:
+	if not is_active_threat():
+		return
+	_slow_left = shot_slow_time
+	if state == State.CHASING:
+		_stun_length = shot_flinch
+		_enter_state(State.STUNNED)
+	else:
+		_play(screech_sound)
+
+
+## Shows it standing where it was reset to, before the chase begins.
+func show_dormant() -> void:
+	if state == State.DORMANT:
+		_set_concealed(false)
 
 
 func lose_player() -> void:
@@ -187,6 +222,7 @@ func get_center_position() -> Vector3:
 func _physics_process(delta: float) -> void:
 	_state_time += delta
 	_stun_cooldown_left = maxf(0.0, _stun_cooldown_left - delta)
+	_slow_left = maxf(0.0, _slow_left - delta)
 	_move_dir = Vector3.ZERO
 	var player := Chase.player
 
@@ -221,7 +257,7 @@ func _physics_process(delta: float) -> void:
 			if is_instance_valid(player):
 				_record_trail(player)
 				_update_gap(player)
-			if _state_time >= stun_duration:
+			if _state_time >= _stun_length:
 				_enter_state(State.CHASING)
 
 		State.LOST:
@@ -392,6 +428,8 @@ func _update_speed(player: RelentlessPlayer) -> void:
 	var s := lerpf(near_speed_scale, far_speed_scale, t)
 	if player.exhausted:
 		s *= exhaustion_mercy
+	if _slow_left > 0.0:
+		s = minf(s, near_speed_scale) * shot_slow_scale
 	_max_speed = player.sprint_speed * s * terrain_speed_scale
 
 
@@ -449,14 +487,22 @@ func _follow_trail(player: RelentlessPlayer, delta: float) -> void:
 	if target.y - feet.y > 0.5 and is_on_floor():
 		velocity.y = jump_velocity
 
-	# If something snags it, skip ahead along the trail rather than standing there.
-	if Vector2(velocity.x, velocity.z).length() < 0.4:
+	# If something snags it (a table edge, a corner), skip ahead along the
+	# trail rather than standing there. Judged by progress toward the next
+	# crumb, not speed: grinding against furniture still has speed.
+	var to_crumb := _flat_distance(feet, target)
+	if _trail_index != _crumb_index:
+		_crumb_index = _trail_index
+		_closest_to_crumb = to_crumb
+		_stuck_time = 0.0
+	elif to_crumb < _closest_to_crumb - 0.05:
+		_closest_to_crumb = to_crumb
+		_stuck_time = 0.0
+	else:
 		_stuck_time += delta
 		if _stuck_time > 0.8:
 			_trail_index = mini(_trail_index + 4, _trail.size() - 1)
 			_stuck_time = 0.0
-	else:
-		_stuck_time = 0.0
 
 	if _trail_index > 256:
 		_trail = _trail.slice(_trail_index)

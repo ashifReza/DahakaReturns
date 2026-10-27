@@ -29,7 +29,7 @@ Press **Esc** to pause, which also frees the mouse.
 Daniel Reyes has been missing for four days. The last camera to see him caught him walking into Blackwood Forest at dusk. You are Officer Hale, and you've driven out for one last look.
 
 1. **Route 9, sunset.** You start in your police car while Dispatch calls off the search. Get out, cross the road, and fetch your flashlight from the trunk.
-2. **The trail.** Find Daniel's 7 belongings along the forest trail while the sun goes down. Picking things up brings noises behind you, and a shadow figure that watches from the trees and then bolts.
+2. **The jungle.** Roam an open stretch of jungle for Daniel's 7 belongings while the sun goes down. They're scattered far apart, each by a landmark: a car wreck, a boulder, a fallen giant, a hunting stand, a well, a rock outcrop, an old camp. After each find, Hale notices which way to look next. While you search, scares come at random: a branch snapping, footsteps that stop when you stop, a screech, and a shadow figure that watches from the trees and then bolts.
 3. **The house.** With all 7 found, drag marks lead through the brush to a house in the dark. The door slams behind you, and then the lights come on. There's blood, drag marks, chains, and Daniel's last note.
 4. **The chase.** Something is standing in the doorway behind you. Slam the kitchen door, grab the revolver (shots don't kill it, but they slow it down), force the back door, and run for the road.
 

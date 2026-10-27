@@ -33,6 +33,7 @@ func _ready() -> void:
 	if not args.is_empty() and not args[0].begins_with("--") and DisplayServer.get_name() != "headless":
 		shot_dir = args[0]
 	StoryDirector.fast_mode = true
+	seed(7)  # the scares are random: keep runs repeatable
 	level = load("res://scenes/story.tscn").instantiate()
 	add_child(level)
 	director = level.get_node("Director")
@@ -40,25 +41,28 @@ func _ready() -> void:
 	Chase.chase_started.connect(func(): _log("chase started"))
 	Chase.chase_ended.connect(func(): _log("chase ended"))
 	Chase.chase_reset.connect(func(): _log("chase reset to checkpoint"))
+	director.scared.connect(func(kind: String): _log("SCARE: %s at %s" % [kind, player.global_position.snapped(Vector3.ONE)]))
 	_plan()
 
 
 func _plan() -> void:
 	steps = [["phase", StoryDirector.Phase.STREET], ["go", 7.8, 21.0], ["go", 0.5, 7.2], ["phase", StoryDirector.Phase.FLASHLIGHT],
 		["go", 4.0, 20.0], ["go", 4.6, 25.2], ["use", "Street/Car/Trunk"], ["go", 3.0, 20.0], ["go", 0.0, 6.0]]
-	# Down the trail, stopping for each clue as it comes up.
-	var events := []
+	# Into the jungle, then from clue to clue, always to the nearest one left.
+	steps += [["go", 0.0, -14.0]]
+	var at := Vector2(0, -14)
+	var left := []
 	for clue in level.get_node("Clues").get_children():
-		var t := _trail_t(Vector2(clue.global_position.x, clue.global_position.z))
-		events.append([t, ["use", "Clues/" + clue.name]])
-	for i in Builder.TRAIL.size():
-		events.append([_trail_t(Builder.TRAIL[i]), ["go", Builder.TRAIL[i].x, Builder.TRAIL[i].y]])
-	events.sort_custom(func(a, b): return a[0] < b[0])
-	for e in events:
-		if e[1][0] == "go" and e[0] > Builder.THICKET_T - 0.03 and steps.back()[0] != "phase":
-			# Every clue should be found by the thicket.
-			steps.append(["phase", StoryDirector.Phase.TRAIL])
-		steps.append(e[1])
+		left.append(clue)
+	while not left.is_empty():
+		left.sort_custom(func(a, b): return at.distance_to(Vector2(a.global_position.x, a.global_position.z)) < at.distance_to(Vector2(b.global_position.x, b.global_position.z)))
+		var next: Node3D = left.pop_front()
+		steps.append(["use", "Clues/" + next.name])
+		at = Vector2(next.global_position.x, next.global_position.z)
+	steps.append(["phase", StoryDirector.Phase.TRAIL])
+	steps.append(["go", 10.0, -118.0])
+	for v in Builder.HOUSE_TRAIL:
+		steps.append(["go", v.x, v.y])
 	var h := Builder.HOUSE
 	steps += [
 		["go", 0, -160], ["go", 0, h.z + 4.0], ["go", 0, h.z - 2.5], ["phase", StoryDirector.Phase.HOUSE],
@@ -71,29 +75,6 @@ func _plan() -> void:
 	for v in Builder.ESCAPE:
 		steps.append(["go", v.x, v.y])
 	steps += [["phase", StoryDirector.Phase.ENDED], ["done"]]
-
-
-## How far along the search trail (0..1) a point is.
-func _trail_t(p: Vector2) -> float:
-	var total := 0.0
-	var lengths := []
-	for i in Builder.TRAIL.size() - 1:
-		var l: float = Builder.TRAIL[i].distance_to(Builder.TRAIL[i + 1])
-		lengths.append(l)
-		total += l
-	var best_d := INF
-	var best_t := 0.0
-	var run := 0.0
-	for i in lengths.size():
-		var a: Vector2 = Builder.TRAIL[i]
-		var b: Vector2 = Builder.TRAIL[i + 1]
-		var q := Geometry2D.get_closest_point_to_segment(p, a, b)
-		var d := p.distance_to(q)
-		if d < best_d - 0.01:
-			best_d = d
-			best_t = (run + a.distance_to(q)) / total
-		run += lengths[i]
-	return best_t
 
 
 func _log(msg: String) -> void:
@@ -160,7 +141,7 @@ func _physics_process(delta: float) -> void:
 					player._interact_released()
 					_pressed = false
 					_log("used %s" % s[1])
-					_next()
+				_next()  # or already had it from before a respawn
 				return
 			var to := item.global_position - player.global_position
 			to.y = 0.0
@@ -193,7 +174,9 @@ func _physics_process(delta: float) -> void:
 					if p._slow_left > before:
 						hits += 1
 					_log("shot %d: %s (ammo %d)" % [shots_fired, "HIT, it's slowed" if p._slow_left > before else "miss", player.ammo])
-			if shots_fired >= s[1] or _wait_time > 6.0:
+			# Don't stand there once it's close: run.
+			var close := p.is_active_threat() and p.global_position.distance_to(player.global_position) < 4.5
+			if shots_fired >= s[1] or _wait_time > 6.0 or close:
 				_wait_time = 0.0
 				_next()
 		"slam":
@@ -237,6 +220,11 @@ func _in_sight(p: Pursuer) -> bool:
 	return player.get_world_3d().direct_space_state.intersect_ray(query).is_empty()
 
 
+var _blocked := 0.0
+var _sidestep := 0.0
+var _sidestep_dir := 1.0
+
+
 func _walk(to: Vector3) -> void:
 	player._yaw = Chase.facing(to)
 	player._pitch = 0.0
@@ -244,6 +232,24 @@ func _walk(to: Vector3) -> void:
 	Input.action_press("sprint")
 	if player.is_on_floor() and player.is_on_wall() and not player.crouched:
 		player.velocity.y = player.jump_velocity
+	# Walked into a tree: step sideways round it for a moment.
+	var dt := get_physics_process_delta_time()
+	if _sidestep > 0.0:
+		_sidestep -= dt
+		var strafe := ("move_right" if _sidestep_dir > 0.0 else "move_left")
+		Input.action_press(strafe)
+		if _sidestep <= 0.0:
+			Input.action_release("move_right")
+			Input.action_release("move_left")
+		return
+	if Vector2(player.velocity.x, player.velocity.z).length() < 1.0 and not player.controls_locked:
+		_blocked += dt
+		if _blocked > 0.25:
+			_blocked = 0.0
+			_sidestep = 0.7
+			_sidestep_dir = -_sidestep_dir
+	else:
+		_blocked = 0.0
 
 
 func _report_if_stuck(delta: float) -> void:
@@ -269,6 +275,9 @@ func _next() -> void:
 func _release() -> void:
 	Input.action_release("move_forward")
 	Input.action_release("sprint")
+	Input.action_release("move_right")
+	Input.action_release("move_left")
+	_sidestep = 0.0
 
 
 func _nearest_go_step() -> int:

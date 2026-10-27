@@ -101,7 +101,12 @@ func _build() -> void:
 
 	if walls:
 		_walls(body)
+	_finish(trunks, canopies, bushes, ferns)
 
+
+## Turns the scattered transforms into MultiMeshes, and registers the
+## bushes and ferns so they can thrash.
+func _finish(trunks: Array[Transform3D], canopies: Array[Transform3D], bushes: Array[Transform3D], ferns: Array[Transform3D]) -> void:
 	add_child(_multimesh("Trunks", _trunk_mesh(), trunks, Color(0.11, 0.08, 0.06), true))
 	# Only trunks cast shadows: canopy and bush shadows cost more than a third
 	# of the frame on a weak GPU, for little you can see at night.

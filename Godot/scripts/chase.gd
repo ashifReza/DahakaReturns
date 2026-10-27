@@ -12,6 +12,8 @@ const LAYER_WORLD := 1
 const LAYER_PLAYER := 2
 const LAYER_PURSUER := 4
 const LAYER_DEBRIS := 8
+## Story pickups and props: hit by the interact ray, but nothing walks into them.
+const LAYER_INTERACT := 16
 
 ## Gap (metres along the pursuer's trail) at which danger is 1 and 0.
 var danger_near_gap := 2.0

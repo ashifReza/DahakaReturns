@@ -16,6 +16,8 @@ enum DoorState { OPEN, CLOSED, BROKEN }
 ## Heavy doors start shut, must be held open, and can't be slammed again.
 @export var heavy := false
 @export var hold_time := 1.6
+## Locked doors can't be used by the player (the pursuer still smashes them).
+@export var locked := false
 @export var color := Color(0.16, 0.09, 0.05)
 
 @export_group("Sounds")
@@ -113,7 +115,7 @@ func _set_state(new_state: DoorState, speed: float) -> void:
 # --- Interaction (called by the player) ------------------------------------
 
 func can_interact() -> bool:
-	if state == DoorState.BROKEN:
+	if state == DoorState.BROKEN or locked:
 		return false
 	return not (heavy and state == DoorState.OPEN)
 
@@ -149,6 +151,15 @@ func get_interact_progress() -> float:
 	if heavy and state == DoorState.CLOSED and is_instance_valid(_holder):
 		return _hold_progress
 	return -1.0
+
+
+## Slams shut by itself and locks: stays shut after a checkpoint reset too.
+func slam_shut() -> void:
+	starts_open = false
+	locked = true
+	_holder = null
+	_set_state(DoorState.CLOSED, 18.0)
+	Chase.play_at(slam_sound, global_position)
 
 
 # --- Called by the pursuer -------------------------------------------------

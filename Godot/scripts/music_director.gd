@@ -35,6 +35,16 @@ func _start_loop(stream: AudioStream) -> AudioStreamPlayer:
 	return p
 
 
+## Swaps the ambience bed, e.g. on walking indoors.
+func set_ambience(stream: AudioStream) -> void:
+	ambience = stream
+	if _ambience_player:
+		_ambience_player.stream = stream
+		_ambience_player.play()
+	else:
+		_ambience_player = _start_loop(stream)
+
+
 func _process(delta: float) -> void:
 	var danger := Chase.danger
 	var pursuer := Chase.pursuer

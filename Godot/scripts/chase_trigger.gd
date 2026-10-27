@@ -15,6 +15,8 @@ extends ZoneArea
 @export_multiline var hint := ""
 @export var hint_duration := 4.0
 @export var stinger: AudioStream
+## Ignore the box: only fire() sets it off (from a cutscene).
+@export var manual := false
 
 var _triggered := false
 
@@ -28,6 +30,11 @@ func get_player_respawn() -> Transform3D:
 
 
 func _player_entered(player: RelentlessPlayer) -> void:
+	if not manual:
+		fire(player)
+
+
+func fire(player: RelentlessPlayer) -> void:
 	if _triggered or player.dead:
 		return
 	_triggered = true

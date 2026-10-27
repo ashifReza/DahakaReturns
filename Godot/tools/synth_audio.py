@@ -14,6 +14,8 @@ that the MusicDirector fades in as the danger rises:
 Pure Python (no numpy), so it runs anywhere. It takes a minute or two:
 
     python3 Godot/tools/synth_audio.py
+
+Add "story" to make only the story level's sounds (gunshot, car door, branch).
 """
 import math
 import os
@@ -729,11 +731,61 @@ def whoosh():
     return add(mul(x, env_asr(n, 0.4, 0.6)), scale(low, 0.5))
 
 
+def gunshot():
+    m = Mix(1.6, stereo=False)
+    n = n_samples(0.08)
+    crack = mul(biquad(noise(n), "hp", 1500, 0.7), env_ad(n, 0.0002, 0.012))
+    m.add(0.0, drive(crack, 3.0), 1.0, wrap=False)
+    n = n_samples(0.5)
+    boom = mul(sweep_sine(140, 45, n, 12), env_ad(n, 0.001, 0.09))
+    m.add(0.0, drive(boom, 2.5), 0.9, wrap=False)
+    # The shot rolling away through the trees.
+    n = n_samples(1.5)
+    tail = mul(onepole_lp(noise(n), 700), env_ad(n, 0.01, 0.4))
+    m.add(0.02, tail, 0.35, wrap=False)
+    m.normalize(0.95)
+    return m
+
+
+def car_door():
+    m = Mix(0.9, stereo=False)
+    n = n_samples(0.12)
+    latch = mul(biquad(noise(n), "bp", 2500, 3), env_ad(n, 0.0005, 0.015))
+    m.add(0.0, latch, 0.5, wrap=False)
+    n = n_samples(0.6)
+    thump = mul(sweep_sine(110, 55, n, 8), env_ad(n, 0.001, 0.06))
+    body = mul(biquad(noise(n), "lp", 400, 0.7), env_ad(n, 0.001, 0.05))
+    m.add(0.03, drive(add(thump, scale(body, 0.6)), 2.0), 1.0, wrap=False)
+    m.add(0.05, mul(sine(220, n), env_ad(n, 0.001, 0.04)), 0.15, wrap=False)
+    m.normalize(0.9)
+    return m
+
+
+def branch_snap():
+    m = Mix(0.8, stereo=False)
+    for k in range(3):
+        n = n_samples(0.05)
+        sp = mul(biquad(noise(n), "bp", rng.uniform(1800, 3500), 2.5), env_ad(n, 0.0003, 0.008))
+        m.add(k * rng.uniform(0.02, 0.05), sp, 1.0 - k * 0.25, wrap=False)
+    m.add(0.0, wood_hit(0.4, 1.6), 0.4, wrap=False)
+    n = n_samples(0.6)
+    m.add(0.1, mul(biquad(noise(n), "bp", 2600, 0.6), env_asr(n, 0.05, 0.4)), 0.2, wrap=False)
+    m.normalize(0.85)
+    return m
+
+
 def mono(samples, peak=0.9):
     m = Mix(len(samples) / SR + 0.01, stereo=False)
     m.add(0, samples, 1.0, wrap=False)
     m.normalize(peak)
     return m
+
+
+def story_sounds():
+    sfx = os.path.join(OUT, "sfx")
+    gunshot().save(os.path.join(sfx, "gunshot.wav"))
+    car_door().save(os.path.join(sfx, "car_door.wav"))
+    branch_snap().save(os.path.join(sfx, "branch_snap.wav"))
 
 
 def main():
@@ -759,7 +811,11 @@ def main():
     pickup().save(os.path.join(sfx, "pickup.wav"))
     stinger().save(os.path.join(sfx, "stinger.wav"))
     bridge_collapse().save(os.path.join(sfx, "bridge_collapse.wav"))
+    story_sounds()
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    # "story" makes just the sounds the story level added, without the long
+    # wait for the music.
+    story_sounds() if "story" in sys.argv[1:] else main()

@@ -6,6 +6,10 @@ uniform vec3 vein_color : source_color = vec3(1.0, 0.32, 0.06);
 uniform vec3 rim_color : source_color = vec3(0.25, 0.12, 0.35);
 uniform float vein_scale = 3.2;
 uniform float rage = 0.3;
+// Wet obsidian by default; the pale cryptid is matte skin.
+uniform float roughness = 0.32;
+uniform float metallic = 0.4;
+uniform float specular = 0.7;
 instance uniform vec3 seed = vec3(0.0);
 
 varying vec3 object_pos;
@@ -39,9 +43,9 @@ void fragment() {
 	float pulse = 0.6 + 0.4 * sin(TIME * (2.0 + rage * 6.0) + n * 12.0);
 
 	ALBEDO = base_color;
-	ROUGHNESS = 0.32;
-	METALLIC = 0.4;
-	SPECULAR = 0.7;
+	ROUGHNESS = roughness;
+	METALLIC = metallic;
+	SPECULAR = specular;
 	float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 3.0);
 	EMISSION = vein_color * crack * pulse * (0.05 + rage * rage * 3.0) + rim_color * rim * 0.2;
 }
